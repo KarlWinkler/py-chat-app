@@ -105,13 +105,6 @@ class Tracker():
         return peers
 
 
-    def get_peer(self, info_hash: str, peer_id: str):
-        for id, peer in self.torrents[info_hash].items():
-            if id == peer_id:
-                return peer
-        return None
-
-
     def try_add_peer(self, info_hash: str, peer_id: str, address: str, port: int):
         peer_tuple = (address, port, time.time())
 
