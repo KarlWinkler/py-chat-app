@@ -1,122 +1,175 @@
-import socket
-import select
+from threading import Thread
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import bencode
+import time
+import urllib.parse
 
 
-TEXT_ENCODING = 'utf-8'
+# Remove peers from the peer list who do not request continuous updates from the tracker after this many seconds
+PEER_INACTIVITY_TIMEOUT = 10
 
 
-# To start with, we will only support HTTP trackers and not UDP trackers
+class TrackerRequestHandler(BaseHTTPRequestHandler):
+    def __init__(self, tracker: 'Tracker', *args, **kwargs):
+        self.tracker = tracker
+        super().__init__(*args, **kwargs)
+
+
+    """This is tracker._server.handle_request()"""
+    def do_GET(self):
+        parsed_url = urllib.parse.urlparse(self.path)
+        query_params = urllib.parse.parse_qs(parsed_url.query)
+
+        if not query_params:
+            self.send_error_response("Payload required")
+            return
+
+        peer_address = self.client_address[0]
+        peer_id = query_params.get("peer_id")[0]
+        peer_port = query_params.get("port")[0]
+        info_hash = query_params.get("info_hash")[0]
+        event = query_params.get("event")[0]
+        #compact = bool(query_params.get("compact")[0]) # TODO: Support compact peer lists
+
+        if event == "started":
+            self.tracker.try_add_peer(info_hash, peer_id, peer_address, peer_port)
+        elif event == "stopped":
+            # Peer has requested to remove itself from the peer list
+            self.tracker.remove_peer(info_hash, peer_id)
+        elif event == "completed":
+            # TODO: Handle actions when peer is finished downloading
+            pass
+        else:
+            self.send_error_response("Bad event")
+            return
+
+        self.send_success_response(info_hash, peer_id)
+    
+
+    def send_success_response(self, info_hash: str, requesting_peer_id: str):
+        response_payload = {
+            "interval": self.tracker.interval,
+            "tracker id": self.tracker.tracker_id,
+            "complete": 0,
+            "incomplete": 0,
+            "peers": self.tracker.build_verbose_peer_list(info_hash, requesting_peer_id)
+        }
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(bencode.encode(response_payload))
+
+
+    def send_error_response(self, failure_reason: str):
+        response_payload = {
+            "failure reason": failure_reason
+        }
+        self.send_response(403)
+        self.end_headers()
+        self.wfile.write(bencode.encode(response_payload))
+
+
 class Tracker():
+    def __init__(self, address: str, port: int, interval: int = 10):
+        self.port = port
+        self.running = False
+        self.interval = interval
+        self.torrents = {str: {}}
+        self.tracker_id = 0 # TODO: Unique tracker ids are not needed currently
+        self.thread = None
 
-    def __init__(
-        self,
-        address: str,
-        port: int,
-        debug_mode: bool = False,
-    ):
-        self.id = address + ":" + port
-        self.debug_mode = debug_mode
-        self._running = False
-        self._peer_sockets = []
-        self._torrents = []
+        self._server = HTTPServer(
+            # Empty string automatically defaults to loopback address
+            (address, self.port),
+            # Pass a reference to the tracker to the http server
+            lambda *args, **kwargs: TrackerRequestHandler(self, *args, **kwargs)
+        )
+        # Block for 5 seconds before checking for keyboard interrupts if running on main thread
+        self._server.timeout = 5
+        self.address = self._server.server_address
+    
 
+    def build_verbose_peer_list(self, info_hash: str, requesting_peer_id: str) -> list[dict]:
+        peers = []
 
-    def listen_for_peer_requests(self, max_clients: int = 100):
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.setblocking(False)
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._socket.bind((self.address, self.port))
-        self._socket.listen(max_clients)
-
-        if self.debug_mode:
-            print(f"[{self.id}] started listening for connections on {self.address}:{self.port}...")
+        for peer_id, peer in self.torrents[info_hash].items():
+            print("PEER:  ", peer_id, peer[0], peer[1])
+            # Exclude the peer who requested the peer list from the response
+            if peer_id != requesting_peer_id:
+                peer_data = {
+                    "peer id": peer_id,
+                    "ip": peer[0],
+                    "port": peer[1]
+                }
+                peers.append(peer_data)
         
-        self._running = True
+        return peers
 
+
+    def get_peer(self, info_hash: str, peer_id: str):
+        for id, peer in self.torrents[info_hash].items():
+            if id == peer_id:
+                return peer
+        return None
+
+
+    def try_add_peer(self, info_hash: str, peer_id: str, address: str, port: int):
+        peer_tuple = (address, port, time.time())
+
+        if info_hash in self.torrents:
+            self.torrents[info_hash][peer_id] = peer_tuple
+        else:
+            self.torrents[info_hash] = {peer_id: peer_tuple}
+    
+
+    def remove_peer(self, info_hash, peer_id):
+        del self.torrents[info_hash][peer_id]
+
+
+    def remove_unresponsive_peers(self, info_hash: str):
+        peers_to_remove = []
+
+        for peer_id, peer in self.torrents[info_hash].items():
+            timestamp = peer[2]
+            if time.time() - timestamp >= PEER_INACTIVITY_TIMEOUT:
+                peers_to_remove.append(peer_id)
+
+        for peer_id in peers_to_remove:
+            print("Dead peer removed: ", peer[0], peer[1], time.time() - peer[2])
+            self.remove_peer(info_hash, peer_id)
+
+
+    def handle_requests(self):
+        print(f"Listening for peer requests on {self.address}...")
         try:
-            while self._running:
-                socket_list = [self._socket] + self._peer_sockets
-                # Get sockets ready to read from & sockets that threw an error
-                # Use a timeout of 2 seconds so we periodically interrupt the select call to check for exceptions
-                readable, _, exceptional = select.select(socket_list, [], socket_list, 2)
+            while self.running:
+                self._server.handle_request()
 
-                for sock in readable:
-                    # Check if we are ready to read in a new connection from the server socket
-                    if sock == self._socket:
-                        peer_socket, _ = self._socket.accept()
+                for info_hash in self.torrents:
+                    self.remove_unresponsive_peers(info_hash)
 
-                        if message := self.receive_peer_request(peer_socket):
-                            self._peer_sockets.append(peer_socket)  # TODO: Only register peer if the request is of valid form
-                            self.handle_peer_request(peer_socket, message)
-                        else:
-                            # Peer did not send a request with the initial connection
-                            self.disconnect(peer_socket)
-                    else:
-                        message = self.receive_peer_request(sock)
-                        # Otherwise assume the message was from a peer
-                        if message:
-                            self.handle_peer_request(sock, message)
-
-                for sock in exceptional:
-                    self.disconnect(sock)
         except (SystemExit, KeyboardInterrupt):
-            self.stop()
-
-
-    # Temporary message handler, tracker accepts text only instead of GET requests
-    def receive_peer_request(self, peer_socket: socket.socket):
-        try:
-            # TODO: Parse requests of arbirary size
-            message = peer_socket.recv(10)
-
-            if self.debug_mode and peer_socket in self._peer_sockets:
-                peer_name = self.get_peer_name(peer_socket)
-                print(f"[{peer_name}] {message.decode(TEXT_ENCODING)}")
-
-            return message
-        except:
-            return None
-
-
-    def handle_peer_request(self, peer_socket: socket.socket, message: str):
-        # TODO: Parse request type and call send_response_to_peer()
-        pass
-
-
-    def get_peer_name(self, peer_socket: socket.socket):
-        address, port = peer_socket.getsockname()
-        
-        return address + ":" + port
-
-
-    def disconnect(self, peer_socket: socket.socket):
-        peer_name = self.get_peer_name(peer_socket)
-
-        if not peer_socket in self._peer_sockets:
-            if self.debug_mode:
-                print(f"[{self.id}] Error: a connection with \"{peer_name}\" does not exist")
-            return False
-
-        self._peer_sockets.remove(peer_socket)
-
-        if self.debug_mode:
-            print(f"[{self.id}] connection with \"{peer_name}\" has ended")
-
-
-    def send_response_to_peer(swelf, peer_socket: socket.socket):
-        pass
-
-
-    def stop_listening():
-        pass
+            self.running = False
     
-def main(address='localhost', port=8080):
-    tracker = Tracker(address, port, debug_mode=True)
-    tracker.listen_for_peer_requests()
+
+    def start(self, new_thread: bool = False):
+        self.running = True
+
+        if new_thread:
+            self.thread = Thread(target = self.handle_requests)
+            self.thread.start()
+        else:
+            self.handle_requests()
     
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 1:
-        main(sys.argv[1], int(sys.argv[2]))
-    else:
-        main()
+
+    def stop(self):
+        if self.running:
+            self.running = False
+            if self.thread:
+                self.thread.join()
+                self.thread = None
+
+
+    def __del__(self):
+        self.stop()
+        self._server.server_close()
+
