@@ -1,5 +1,6 @@
 from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from prettytable import PrettyTable
 import bencode
 import time
 import urllib.parse
@@ -7,6 +8,7 @@ import urllib.parse
 
 # Remove peers from the peer list who do not request continuous updates from the tracker after this many seconds
 PEER_INACTIVITY_TIMEOUT = 10
+DEBUG_MODE = True
 
 
 class TrackerRequestHandler(BaseHTTPRequestHandler):
@@ -42,6 +44,10 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
         else:
             self.send_error_response("Bad event")
             return
+        
+        # Display peer table stored by tracker
+        if DEBUG_MODE:
+            print(self.tracker)
 
         self.send_success_response(info_hash, peer_id)
     
@@ -92,7 +98,6 @@ class Tracker():
         peers = []
 
         for peer_id, peer in self.torrents[info_hash].items():
-            print("PEER:  ", peer_id, peer[0], peer[1])
             # Exclude the peer who requested the peer list from the response
             if peer_id != requesting_peer_id:
                 peer_data = {
@@ -127,12 +132,14 @@ class Tracker():
                 peers_to_remove.append(peer_id)
 
         for peer_id in peers_to_remove:
-            print("Dead peer removed: ", peer[0], peer[1], time.time() - peer[2])
+            if DEBUG_MODE:
+                print("Dead peer removed: ", peer[0], peer[1], time.time() - peer[2])
             self.remove_peer(info_hash, peer_id)
 
 
     def handle_requests(self):
-        print(f"Listening for peer requests on {self.address}...")
+        if DEBUG_MODE:
+            print(f"Listening for peer requests on {self.address}...")
         try:
             while self.running:
                 self._server.handle_request()
@@ -160,6 +167,17 @@ class Tracker():
             if self.thread:
                 self.thread.join()
                 self.thread = None
+
+
+    def __str__(self):
+        table = PrettyTable()
+        table.field_names = ["Peer ID", "IP", "Port"]
+
+        for info_hash in self.torrents:
+            for peer_id, peer in self.torrents[info_hash].items():
+                table.add_row([peer_id, peer[0], peer[1]])
+        
+        return table.get_string()
 
 
     def __del__(self):

@@ -1,4 +1,4 @@
-from threading import Thread
+from threading import Thread, Lock
 from peer_socket import PeerSocket
 from torrent import Torrent
 import random
@@ -6,10 +6,11 @@ import requests
 import bencode
 import sys
 import time
+import select
 
 
 # Time between tracker requests used if not specified by tracker
-DEFAULT_TRACKER_INTERVAL = 3
+DEFAULT_TRACKER_INTERVAL = 9
 
 
 class Client():
@@ -17,18 +18,28 @@ class Client():
         self.peer_socket = PeerSocket(address, port, Client.generate_peer_id())
         self.connected_peers = {str: PeerSocket}
         self.thread = None
+        self.running = False
 
-    
+
+    """
+    Generate Azureus-style 20-byte peer id
+    '-', two chars for client id, '-', 4 digits for version number, followed by random numbers
+    """
+    @staticmethod
+    def generate_peer_id():
+        return '-FA0000-' + ''.join(random.choices('0123456789', k=12))
+
+
     """ Retrieve list of peers from a tracker """
-    def send_tracker_request(self, tracker_url: str, torrent: Torrent, event: str = "started", compact: int = 0):
+    def send_tracker_request(self, tracker_url: str, info_hash: str, event: str = "started", compact: int = 0):
         # Create request payload
         request_payload = {
-            "info_hash": torrent.info_hash,
+            "info_hash": info_hash,
             "peer_id": self.peer_socket.peer_id,
             "port": self.peer_socket.port,
             "uploaded": 0,
             "downloaded": 0,
-            "left": 1000, #TODO: how much of file left to download
+            "left": 1000, #TODO: How much of file is left to download
             "event": event,
             "compact": compact
         }
@@ -45,96 +56,92 @@ class Client():
         return tracker_response
 
 
-    """ 
-    Generate Azureus-style 20-byte peer id
-    '-', two chars for client id, '-', 4 digits for version number, followed by random numbers
-    """
-    @staticmethod
-    def generate_peer_id():
-        return '-FA0000-' + ''.join(random.choices('0123456789', k=12))
+    def try_connect_to_peer(self, peer_info: dict):
+        if self.connected_peers.get(peer_info["peer id"]): return
 
-
-    def connect_to_peer(self, peer_info: str):
         # TODO: Create socket connection for interacting with this peer
         peer_socket = PeerSocket(
             peer_info["ip"],
             peer_info["port"],
             peer_info["peer id"]
         )
-        peer_socket.request_connection()
+        print("requesting")
+        connected = peer_socket.request_connection()
 
-        if peer_socket.connected:
-            print("connected to: ", peer_socket["peer id"], peer_socket["ip"])
+        if connected:
+            print("connected to: ", peer_socket.peer_id, peer_socket.address)
             self.connected_peers[peer_socket.peer_id] = peer_socket
             #peer_socket.send_handshake()
 
 
-    def connect_to_new_peers(self, peer_list):
-        for peer_info in peer_list:
-            if not self.connected_peers.get(peer_info["peer id"]):
-                self.connect_to_peer(peer_info)
-
-
     """Periodically send requests to all available trackers for a torrent until successful"""
-    def handle_tracker_requests(self, torrent: Torrent, tracker_url: str):
+    def handle_tracker_requests(self, torrent: Torrent, tracker_url: str, send_connection_requests: bool):
         try:
             while self.running:
                 # TODO: Support for multiple trackers at a time
                 # for tracker_url in self.torrent.tracker_list["http"]:
-                status_code, response = self.send_tracker_request(tracker_url, torrent)
+                status_code, response = self.send_tracker_request(tracker_url, torrent.info_hash)
 
                 if status_code == 200:
-                    self.connect_to_new_peers(response["peers"])
+                    if send_connection_requests:
+                        for peer_info in response["peers"]:
+                            print("PEER:", peer_info)
+                            self.try_connect_to_peer(peer_info)
                     # time.sleep(response["interval"])
                     time.sleep(DEFAULT_TRACKER_INTERVAL)
                 else:
                     # Default interval in case request was unsuccessful
                     time.sleep(DEFAULT_TRACKER_INTERVAL)
-
         except (SystemExit, KeyboardInterrupt):
-            self.running = False
+            self.stop()
 
 
-    def handle_seeding_requests(self):
-        self.peer_socket.start_listening()
-
-        while self.peer_socket.seeding:
-            new_connection = self.peer_socket.accept_connection()
-            if new_connection != None:
-                pass
+    def start_tracker_requests(self, torrent: Torrent, tracker_url: str, send_connection_requests: bool):
+        self.running = True
+        self.thread = Thread(target = self.handle_tracker_requests, args=(torrent,tracker_url,send_connection_requests,))
+        self.thread.daemon = True
+        self.thread.start()
 
 
     def start_leeching(self, torrent: Torrent, tracker_url: str):
-        self.running = True
-        self.handle_tracker_requests(torrent, tracker_url) # TODO: Run on dedicated thread
-        #self.thread = Thread(target = self.handle_tracker_requests, args=(torrent,tracker_url,))
-        #self.thread.start()
+        self.start_tracker_requests(torrent, tracker_url, True)
+
+        try:
+            while self.running:
+                time.sleep(DEFAULT_TRACKER_INTERVAL)
+
+        except (SystemExit, KeyboardInterrupt):
+            self.stop()
 
 
     def start_seeding(self, torrent: Torrent, tracker_url: str):
-        self.running = True
-        self.thread = Thread(target = self.handle_tracker_requests, args=(torrent,tracker_url,))
-        self.thread.start()
-        self.handle_tracker_requests(torrent, tracker_url)
+        self.start_tracker_requests(torrent, tracker_url, False)
+        self.peer_socket.start_listening()
+        socket_list = [self.peer_socket.socket]
 
+        try:
+            while self.running:
+                readable, _, exceptional = select.select(socket_list, [], socket_list, 1)
 
-    def test_tracker_connection(self, torrent: Torrent, address: int, port: int):
-        status_code, response = self.send_tracker_request(f"http://{address}:{port}", torrent)
+                for sock in readable:
+                    if sock == self.peer_socket.socket:
+                        peer_socket = self.peer_socket.accept_connection()
+                        if peer_socket:
+                            print("accepted:",peer_socket)
+                            socket_list.append(peer_socket)
+                    else:
+                        pass
+                
+            for sock in exceptional:
+                socket_list.remove(sock)
 
-        complete = response["complete"]
-        incomplete = response["incomplete"]
-        interval = response["interval"]
-        peer_list = response["peers"]
-        tracker_id = response["tracker id"]
-
-        for peer_info in peer_list:
-            print("PEER: ", peer_info["peer id"], peer_info["ip"], peer_info["port"])
+        except (SystemExit, KeyboardInterrupt):
+            self.stop()
 
 
     def stop(self):
-        if self.running:
-            self.running = False
-            if self.thread:
-                self.thread.join()
-                self.thread = None
+        self.running = False
 
+
+    def __del__(self):
+        self.stop()

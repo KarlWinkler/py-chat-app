@@ -1,6 +1,8 @@
 import sys
 import peer_state
 import socket
+import requests
+import bencode
 
 
 # Maximum number of connections allowed by the socket
@@ -22,7 +24,7 @@ class PeerSocket():
         self.seeding = False
 
 
-    def send_handshake(self):
+    def build_handshake(self):
         self.completed_handshake = True
 
 
@@ -34,7 +36,8 @@ class PeerSocket():
         except OSError as e:
             self.seeding = False
             print(f"Failed to bind to port {self.address}:{self.port}: {e}", file=sys.stderr)
-            sys.exit(0)
+        finally:
+            return self.seeding
 
 
     def request_connection(self):
@@ -44,14 +47,28 @@ class PeerSocket():
         except OSError as e:
             self.connected = False
             print(f"Failed to connect to {self.address}:{self.port}: {e}", file=sys.stderr)
+        finally:
+            return self.connected
 
 
     def accept_connection(self):
+        connection = None
         try:
             connection = self.socket.accept()
             self.connected = True
         except OSError as e:
             self.connected = False
             print(f"Failed to accept connection request from {self.address}:{self.port}: {e}", file=sys.stderr)
+        finally:
+            return connection
+    
+    
+    def disconnect(self):
+        self.connected = False
+        self.seeding = False
+        self.leeching = False
+        self.socket.close()
 
-        return connection
+
+    def __del__(self):
+        self.disconnect()

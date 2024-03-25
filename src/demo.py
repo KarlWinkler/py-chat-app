@@ -10,6 +10,19 @@ TRACKER_ADDRESS = "127.0.0.1"
 TRACKER_PORT = 35455
 
 
+def test_tracker_connection(self, client: Client, info_hash: str):
+    status_code, response = client.send_tracker_request(f"http://{TRACKER_ADDRESS}:{TRACKER_PORT}", info_hash)
+    complete = response["complete"]
+    incomplete = response["incomplete"]
+    interval = response["interval"]
+    peer_list = response["peers"]
+    tracker_id = response["tracker id"]
+
+    if status_code == 200:
+        for peer_info in peer_list:
+            print("PEER: ", peer_info["peer id"], peer_info["ip"], peer_info["port"])
+
+
 def run_tracker():
     tracker = Tracker(TRACKER_ADDRESS, TRACKER_PORT)
     tracker.start()
@@ -18,16 +31,15 @@ def run_tracker():
 # Make sure at least one tracker is running before 
 def run_leecher():
     torrent = Torrent().load_from_file("torrent_files\\example_torrent123.torrent")
-    client = Client("127.0.0.1", 34225, torrent)
-
-    #client.test_tracker_connection(torrent, TRACKER_ADDRESS, TRACKER_PORT)
+    client = Client("127.0.0.1", 34225)
     client.start_leeching(torrent, f"http://{TRACKER_ADDRESS}:{TRACKER_PORT}")
+    #self.test_tracker_connection(client, torrent.info_hash)
 
 
 def run_seeder():
     torrent = Torrent().load_from_file("torrent_files\\TorA.torrent")
-    client = Client("127.0.0.1", 34225, torrent)
-    client.start_seeding(torrent)
+    client = Client("127.0.0.1", 34225)
+    client.start_seeding(torrent, f"http://{TRACKER_ADDRESS}:{TRACKER_PORT}")
 
 
 def main():
