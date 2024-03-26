@@ -1,4 +1,3 @@
-from peer_socket import PeerSocket
 from client import Client
 from tracker import Tracker
 from torrent import Torrent
@@ -37,8 +36,8 @@ def run_leecher():
 
 
 def run_seeder():
-    torrent = Torrent().load_from_file("torrent_files\\TorA.torrent")
-    client = Client("127.0.0.1", 34225)
+    torrent = Torrent().load_from_file("torrent_files\\example_torrent123.torrent")
+    client = Client("127.0.0.1", 34425)
     client.start_seeding(torrent, f"http://{TRACKER_ADDRESS}:{TRACKER_PORT}")
 
 

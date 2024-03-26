@@ -31,7 +31,12 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
         peer_port = query_params.get("port")[0]
         info_hash = query_params.get("info_hash")[0]
         event = query_params.get("event")[0]
-        #compact = bool(query_params.get("compact")[0]) # TODO: Support compact peer lists
+
+        try:
+            peer_port = int(peer_port)
+        except ValueError:
+            self.send_error_response("Bad port")
+            return
 
         if event == "started":
             self.tracker.try_add_peer(info_hash, peer_id, peer_address, peer_port)
@@ -75,7 +80,7 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
 
 
 class Tracker():
-    def __init__(self, address: str, port: int, interval: int = 10):
+    def __init__(self, address: str, port: int, interval: int = 9):
         self.port = port
         self.running = False
         self.interval = interval

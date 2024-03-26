@@ -46,12 +46,13 @@ class Client():
 
         # Send GET request to tracker
         tracker_response = requests.get(tracker_url, request_payload, timeout=5)
+        response_text = bencode.decode(tracker_response.text)
 
         if tracker_response.status_code != 200:
-            print(f"Failed to get peer list from tracker: {tracker_response.text}", file=sys.stderr)
+            print(f"Failed to get peer list from tracker: {response_text["failure reason"]}", file=sys.stderr)
 
         # Decode the response to retrieve the dictionary
-        tracker_response = [tracker_response.status_code, bencode.decode(tracker_response.text)]
+        tracker_response = [tracker_response.status_code, response_text]
 
         return tracker_response
 
@@ -85,10 +86,9 @@ class Client():
                 if status_code == 200:
                     if send_connection_requests:
                         for peer_info in response["peers"]:
-                            print("PEER:", peer_info)
                             self.try_connect_to_peer(peer_info)
-                    # time.sleep(response["interval"])
-                    time.sleep(DEFAULT_TRACKER_INTERVAL)
+
+                    time.sleep(response["interval"])
                 else:
                     # Default interval in case request was unsuccessful
                     time.sleep(DEFAULT_TRACKER_INTERVAL)
@@ -97,6 +97,8 @@ class Client():
 
 
     def start_tracker_requests(self, torrent: Torrent, tracker_url: str, send_connection_requests: bool):
+        if self.running: return
+
         self.running = True
         self.thread = Thread(target = self.handle_tracker_requests, args=(torrent,tracker_url,send_connection_requests,))
         self.thread.daemon = True
@@ -116,6 +118,7 @@ class Client():
 
     def start_seeding(self, torrent: Torrent, tracker_url: str):
         self.start_tracker_requests(torrent, tracker_url, False)
+
         self.peer_socket.start_listening()
         socket_list = [self.peer_socket.socket]
 
@@ -125,10 +128,11 @@ class Client():
 
                 for sock in readable:
                     if sock == self.peer_socket.socket:
-                        peer_socket = self.peer_socket.accept_connection()
-                        if peer_socket:
-                            print("accepted:",peer_socket)
-                            socket_list.append(peer_socket)
+                        connection = self.peer_socket.accept_connection()
+                        if connection:
+                            leech_socket = connection[0]
+                            socket_list.append(leech_socket)
+                            print("Accepted connection from: ", leech_socket)
                     else:
                         pass
                 

@@ -1,8 +1,7 @@
 import sys
 import peer_state
 import socket
-import requests
-import bencode
+import message
 
 
 # Maximum number of connections allowed by the socket
@@ -24,16 +23,13 @@ class PeerSocket():
         self.seeding = False
 
 
-    def build_handshake(self):
-        self.completed_handshake = True
-
-
     def start_listening(self):
         try:
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.socket.bind((self.address, self.port))
             self.socket.listen(MAX_PEER_REQUESTS)
             self.seeding = True
-        except OSError as e:
+        except Exception as e:
             self.seeding = False
             print(f"Failed to bind to port {self.address}:{self.port}: {e}", file=sys.stderr)
         finally:
@@ -44,7 +40,7 @@ class PeerSocket():
         try:
             self.socket.connect((self.address, self.port))
             self.connected = True
-        except OSError as e:
+        except Exception as e:
             self.connected = False
             print(f"Failed to connect to {self.address}:{self.port}: {e}", file=sys.stderr)
         finally:
@@ -61,8 +57,41 @@ class PeerSocket():
             print(f"Failed to accept connection request from {self.address}:{self.port}: {e}", file=sys.stderr)
         finally:
             return connection
-    
-    
+
+
+    def send_data(self, raw_data):
+        try:
+            self.socket.sendall(raw_data)
+            return True
+        except Exception as e:
+            print(f"Error while sending data: {e}")
+            return False
+
+
+    def receive_data(self, total_bytes):
+        if not self.connected: return
+
+        raw_data = b''
+        bytes_received = 0
+        bytes_remaining = total_bytes
+
+        while (bytes_received < total_bytes):
+            try:
+                chunk = self.socket.recv(min(4096, bytes_remaining))
+            except Exception:
+                return None
+            
+            chunk_length = len(chunk)
+            if chunk_length == 0:
+                return None
+
+            raw_data += chunk
+            bytes_remaining -= chunk_length
+            bytes_received += chunk_length
+
+        return raw_data
+
+
     def disconnect(self):
         self.connected = False
         self.seeding = False
