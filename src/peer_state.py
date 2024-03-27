@@ -37,6 +37,13 @@ INITIAL = _PeerState(
     peer_interested=False
 )
 
+NULL = _PeerState(
+    am_choking=False,
+    am_interested=False,
+    peer_choking=False,
+    peer_interested=False
+)
+
 #Download states
 
 #Base state where self not interested and peer not choking

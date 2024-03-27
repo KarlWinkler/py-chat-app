@@ -30,14 +30,13 @@ def run_tracker():
 # Make sure at least one tracker is running before 
 def run_leecher():
     torrent = Torrent().load_from_file("torrent_files\\example_torrent123.torrent")
-    client = Client("127.0.0.1", 34225)
-    client.start_leeching(torrent, f"http://{TRACKER_ADDRESS}:{TRACKER_PORT}")
-    #self.test_tracker_connection(client, torrent.info_hash)
+    client = Client("127.0.0.1", 32225)
+    client.start_downloading(torrent, f"http://{TRACKER_ADDRESS}:{TRACKER_PORT}")
 
 
 def run_seeder():
     torrent = Torrent().load_from_file("torrent_files\\example_torrent123.torrent")
-    client = Client("127.0.0.1", 34425)
+    client = Client("127.0.0.1", 34445)
     client.start_seeding(torrent, f"http://{TRACKER_ADDRESS}:{TRACKER_PORT}")
 
 

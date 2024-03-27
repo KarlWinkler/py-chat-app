@@ -28,10 +28,10 @@ class Handshake(Message):
     
     def to_bytes(self):
         message = struct.pack("!B", HANDSHAKE_PSTR_LENGTH)
-        message += struct.pack(f"!{HANDSHAKE_PSTR_LENGTH}s", HANDSHAKE_PSTR)
+        message += struct.pack("!{}s".format(HANDSHAKE_PSTR_LENGTH), HANDSHAKE_PSTR)
         message += struct.pack("!Q", 0x0)
         message += struct.pack("!20s", self.info_hash)
-        message += struct.pack("!20s", self.peer_id)
+        message += struct.pack("!20s", self.peer_id.encode('utf-8'))
 
         return message
 
@@ -43,15 +43,16 @@ class Handshake(Message):
         if message_length != HANDSHAKE_MESSAGE_LENGTH:
             raise Exception(f"Bad message length: {message_length}")
         
-        pstr_len = struct.unpack("!B", raw_message[:1])
+        # struct.unpack always returns a tuple
+        pstr_len = struct.unpack("!B", raw_message[:1])[0]
         pstr, _, info_hash, peer_id = struct.unpack("!{}s8s20s20s".format(pstr_len), raw_message[1:message_length])
 
         if pstr != HANDSHAKE_PSTR:
-            raise Exception(f"Bad message protocol: {[pstr]}")
+            raise Exception(f"Bad pstr: {[pstr]}")
 
         return Handshake(info_hash, peer_id)
         
 
-    def verify(self, info_hash, peer_id):
-        return self.info_hash == info_hash and self.peer_id == peer_id
+    def validate(self, info_hash: str, peer_id: str):
+        return self.info_hash == info_hash and self.peer_id != peer_id
 
