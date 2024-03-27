@@ -132,13 +132,20 @@ class Peer():
 
 
     def accept_connection(self):
-        connection = None
+        peer = None
         try:
-            connection = self.socket.accept()
-        except OSError as e:
-            print(f"Failed to accept connection request from {self.address}:{self.port}: {e}", file=sys.stderr)
+            peer_socket, _ = self.socket.accept()
+            if not peer_socket:
+                return None
+
+            peer_address, peer_port = peer_socket.getpeername()
+            peer = Peer(peer_address, peer_port, sock=peer_socket)
+            peer.connected = True
+
+        except Exception as e:
+            print(f"Failed to accept connection request: {e}", file=sys.stderr)
         finally:
-            return connection
+            return peer
 
 
     def disconnect(self):

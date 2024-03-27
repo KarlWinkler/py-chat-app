@@ -74,8 +74,8 @@ class Client():
 
         if connected and peer.initiate_handshake(info_hash, self.client_peer.peer_id):
             self.connected_peers[peer.peer_id] = peer
-            print("Connected to: ", peer.peer_id, peer.address)
-            print(f"Completed handshake with {peer.address, peer.port}")
+            print(f"Connected to: {peer.peer_id, peer.address, peer.port}")
+            print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
 
 
     """Periodically send requests to all available trackers for a torrent until successful"""
@@ -150,18 +150,15 @@ class Client():
 
                 for sock in readable:
                     if sock == self.client_peer.socket:
-                        peer_socket, _ = self.client_peer.accept_connection()
-                        if peer_socket:
-                            peer_address, peer_port = peer_socket.getpeername()
-                            peer = Peer(peer_address, peer_port, sock=peer_socket)
-                            peer.connected = True
+                        peer = self.client_peer.accept_connection()
+                        if not peer: continue
 
-                            print(f"Accepted connection from: {peer_address, peer_port}")
+                        print(f"Accepted connection from: {peer.peer_id, peer.address, peer.port}")
 
-                            handshake: Handshake = peer.respond_handshake(torrent.info_hash, self.client_peer.peer_id)
-                            if handshake:
-                                print(f"Completed handshake with {peer_address, peer_port}")
-                                self.connected_peers[handshake.peer_id] = peer
+                        handshake: Handshake = peer.respond_handshake(torrent.info_hash, self.client_peer.peer_id)
+                        if handshake:
+                            print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
+                            self.connected_peers[handshake.peer_id] = peer
                     else:
                         sock: socket.socket
 
