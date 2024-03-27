@@ -25,11 +25,11 @@ class Peer():
 
 
     """Send handshake before receive (for downloading peers)"""
-    def initiate_handshake(self, info_hash: str, client_peer_id: str):
+    def initiate_handshake(self, info_hash: str, client_peer_id: str, expected_peer_id: str):
         if not self.send_handshake(info_hash, client_peer_id):
             return False
 
-        if not self.receive_handshake(info_hash, client_peer_id):
+        if not self.receive_handshake(info_hash, client_peer_id, expected_peer_id):
             return False
 
         self.completed_handshake = True
@@ -58,14 +58,14 @@ class Peer():
         return handshake
 
 
-    def receive_handshake(self, info_hash: str, client_peer_id: str):
+    def receive_handshake(self, info_hash: str, client_peer_id: str, expected_peer_id: str = None):
         raw_handshake = self.receive_data(message.HANDSHAKE_MESSAGE_LENGTH)
         if raw_handshake is None:
             return None
 
         handshake = message.Handshake.from_bytes(raw_handshake)
 
-        if not handshake.validate(info_hash, client_peer_id):
+        if not handshake.validate(info_hash, client_peer_id, expected_peer_id):
             return False
 
         return handshake

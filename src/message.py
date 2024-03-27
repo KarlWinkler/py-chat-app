@@ -53,6 +53,12 @@ class Handshake(Message):
         return Handshake(info_hash, peer_id)
         
 
-    def validate(self, info_hash: str, peer_id: str):
-        return self.info_hash == info_hash and self.peer_id != peer_id
+    def validate(self, info_hash: str, client_peer_id: str, expected_peer_id: str = None):
+        if self.info_hash != info_hash:
+            return False
+
+        if expected_peer_id and self.peer_id == expected_peer_id:
+            return True
+        
+        return self.peer_id != client_peer_id
 

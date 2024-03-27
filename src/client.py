@@ -22,8 +22,6 @@ class Client():
         self.thread = None
         self.running = False
         self.seeding = False
-        self.peer_list = []
-        #self.peer_list_lock = Lock()
 
 
     """
@@ -72,7 +70,7 @@ class Client():
         )
         connected = peer.request_connection()
 
-        if connected and peer.initiate_handshake(info_hash, self.client_peer.peer_id):
+        if connected and peer.initiate_handshake(info_hash, self.client_peer.peer_id, peer.peer_id):
             self.connected_peers[peer.peer_id] = peer
             print(f"Connected to: {peer.peer_id, peer.address, peer.port}")
             print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
@@ -90,10 +88,6 @@ class Client():
                     if not self.seeding:
                         for peer_info in response["peers"]:
                             self.try_connect_to_peer(torrent.info_hash, peer_info)
-
-                    #self.peer_list_lock.acquire()
-                    self.peer_list = response["peers"]
-                    #self.peer_list_lock.release()
 
                     time.sleep(response["interval"])
                 else:
@@ -125,6 +119,8 @@ class Client():
 
         try:
             while self.running:
+                #Request pieces and download from connected peers
+
                 time.sleep(DEFAULT_TRACKER_INTERVAL)
 
         except (SystemExit, KeyboardInterrupt):
