@@ -4,6 +4,8 @@ HANDSHAKE_PSTR = b"Modified BitTorrent"
 HANDSHAKE_PSTR_LENGTH = len(HANDSHAKE_PSTR)
 HANDSHAKE_MESSAGE_LENGTH = 49 + HANDSHAKE_PSTR_LENGTH
 
+PEER_WIRE_MESSAGE_LENGTH = 4
+
 
 class Message():
     def __init__(self, message_length: int):
@@ -15,7 +17,7 @@ class Message():
 
 
     @classmethod
-    def from_bytes(cls, raw_data):
+    def from_bytes(cls, raw_data: bytes):
          raise NotImplementedError()
 
 
@@ -37,7 +39,7 @@ class Handshake(Message):
 
 
     @classmethod
-    def from_bytes(cls, raw_message):
+    def from_bytes(cls, raw_message: bytes):
         message_length = len(raw_message)
 
         if message_length != HANDSHAKE_MESSAGE_LENGTH:
@@ -46,6 +48,7 @@ class Handshake(Message):
         # struct.unpack always returns a tuple
         pstr_len = struct.unpack("!B", raw_message[:1])[0]
         pstr, _, info_hash, peer_id = struct.unpack("!{}s8s20s20s".format(pstr_len), raw_message[1:message_length])
+        peer_id: bytes = peer_id.decode('utf-8')
 
         if pstr != HANDSHAKE_PSTR:
             raise Exception(f"Bad pstr: {[pstr]}")
@@ -61,4 +64,20 @@ class Handshake(Message):
             return True
         
         return self.peer_id != client_peer_id
+
+
+class Bitfield(Message):
+    def __init__(self, info_hash: str, peer_id: str):
+        super().__init__(PEER_WIRE_MESSAGE_LENGTH)
+        self.info_hash = info_hash
+        self.peer_id = peer_id
+
+
+    def to_bytes(self):
+        pass
+
+
+    @classmethod
+    def from_bytes(cls, raw_message: bytes):
+        pass
 

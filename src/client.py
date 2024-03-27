@@ -1,4 +1,4 @@
-from threading import Thread, Lock
+from threading import Thread
 from peer import Peer
 from torrent import Torrent
 from message import Handshake
@@ -61,7 +61,8 @@ class Client():
 
 
     def try_connect_to_peer(self, info_hash: str, peer_info: dict):
-        if self.connected_peers.get(peer_info["peer id"]): return
+        if self.connected_peers.get(peer_info["peer id"]):
+            return False
 
         peer = Peer(
             peer_info["ip"],
@@ -72,8 +73,7 @@ class Client():
 
         if connected and peer.initiate_handshake(info_hash, self.client_peer.peer_id, peer.peer_id):
             self.connected_peers[peer.peer_id] = peer
-            print(f"Connected to: {peer.peer_id, peer.address, peer.port}")
-            print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
+            return peer
 
 
     """Periodically send requests to all available trackers for a torrent until successful"""
@@ -87,7 +87,11 @@ class Client():
                 if status_code == 200:
                     if not self.seeding:
                         for peer_info in response["peers"]:
-                            self.try_connect_to_peer(torrent.info_hash, peer_info)
+                            peer = self.try_connect_to_peer(torrent.info_hash, peer_info)
+
+                            if peer:
+                                print(f"Connected to: {peer.peer_id, peer.address, peer.port}")
+                                print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
 
                     time.sleep(response["interval"])
                 else:
@@ -149,12 +153,14 @@ class Client():
                         peer = self.client_peer.accept_connection()
                         if not peer: continue
 
-                        print(f"Accepted connection from: {peer.peer_id, peer.address, peer.port}")
+                        print(f"Accepted connection from: {peer.address, peer.port}")
 
-                        handshake: Handshake = peer.respond_handshake(torrent.info_hash, self.client_peer.peer_id)
+                        handshake = peer.respond_handshake(torrent.info_hash, self.client_peer.peer_id)
                         if handshake:
+                            peer.peer_id = handshake.peer_id
+                            self.connected_peers[peer.peer_id] = peer
+
                             print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
-                            self.connected_peers[handshake.peer_id] = peer
                     else:
                         sock: socket.socket
 
