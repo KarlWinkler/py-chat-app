@@ -1,57 +1,76 @@
 import bencode
-import math
-from piece import Piece
+import util
+import hashlib
+import urllib.parse
 
 class Torrent():
-    def __init__(self, file_name = '', tracker_endpoints = [], total_length = 0, piece_length = 0, pieces = [], pieces_count = 0):
-        self.file_name = file_name
-        self.tracker_endpoints = tracker_endpoints  # List of tuples - (ip_address, port) each taken from a tracker url (urls are extracted from announce-list in metadata - to start, support only HTTP URLs)
-        self.total_length = total_length  # Total file length in bytes
-        self.piece_length = piece_length  # Piece size in bytes
-        self.pieces = pieces              # Concatenation of all 20-byte SHA1 hash values
-        self.pieces_count = pieces_count  # Number of required pieces: int(len(self.total_length) / self.piece_length)
+    def __init__(self):
+        self.data = None
+        self.tracker_list = {}
+        self.created_by = None
+        self.creation_date = None
+        self.encoding = None
+        self.piece_length = 0
+        self.pieces = None
+        self.piece_count = 0
+        self.name = None
+        self.file_list = {}
+        self.info_hash = None
+        self.total_length = 0
 
-
-    # Read .torrent metadata from a bencoded file
-    @staticmethod
-    def read_metadata(file_path: str) -> 'Torrent':
-        with open(file_path, 'rb') as torrentfile:
-            if not torrentfile:
-                print(f"Error: File {file_path} not found")
-                return None
-            contents = bencode.decode(torrentfile.read())
-
-        print(f"Contents: {contents}")
-        info = contents.get('info')
-        print(f"pieces: {info.get('pieces')}")
-        return Torrent(
-            file_name=info.get('name'),
-            tracker_endpoints=Torrent.create_tracker_list(contents.get('announce')),
-            total_length=info.get('length'),
-            piece_length=info.get('piece length'),
-            pieces=Torrent.create_pieces(info.get('pieces'), info.get('piece length')),
-            pieces_count=math.ceil(info.get('length') / info.get('piece length'))
-        )
     
-    
+    def load_from_file(self, file_path: str) -> 'Torrent':
+        # Read as binary file
+        with open(file_path, "rb") as file:
+            self.data: dict = bencode.decode(file.read())
+
+        # List of tracker urls
+        if "announce-list" in self.data:
+            self.tracker_list = Torrent.create_tracker_list(util.flatten(self.data["announce-list"]))
+        # Single tracker url
+        elif "announce" in self.data:
+            self.tracker_list = Torrent.create_tracker_list([self.data["announce"]])
+
+        info = self.data["info"]
+        
+        # List of files
+        if "files" in info:
+            self.file_list = info["files"]
+            self.total_length = sum(file["length"] for file in self.file_list)
+        # Single file
+        else:
+            self.file_list = {"length": info["length"], "path": info["name"]}
+            self.total_length = info["length"]
+
+        self.name = info["name"]
+        self.piece_length = info["piece length"]
+        self.pieces = info["pieces"]
+        self.piece_count = self.total_length // self.piece_length
+        self.info_hash = hashlib.sha1(urllib.parse.urlencode(info).encode()).digest()
+
+        # Optional info included in some torrents
+        self.created_by = self.data.get("created by")
+        self.creation_date = self.data.get("creation date")
+        self.encoding = self.data.get("encoding")
+
+        return self
+
+
+    """Build list of HTTP and UDP tracker urls"""
     @staticmethod
-    def create_tracker_list(tracker_list: list):
-        tracker_tuples = []
+    def create_tracker_list(tracker_urls: list[str]) -> tuple[str, str, int]:
+        tracker_list = {"udp": [], "http": []}
 
-        for tracker in tracker_list:
-            _, tracker_address, tracker_port = tracker.split(':')
-            tracker_address = tracker_address[2:]
-            tracker_tuples.append((tracker_address, int(tracker_port)))
+        for url in tracker_urls:
+            # Remove the info hash from the url (will be calculated manually)
+            trimmed_url = '/'.join(url.split('/')[:3])
+            url = url.lower()
 
-        return tracker_tuples
+            if url.startswith("http"):
+                tracker_list["http"].append(trimmed_url)
+            elif url.startswith("udp"):
+                tracker_list["udp"].append(trimmed_url)
+
+        return tracker_list
 
 
-    @staticmethod
-    def create_pieces(pieces, piece_length) -> list:
-        pieces_list = []
-
-        for index, piece_hash in enumerate(pieces):
-            pieces_list.append(Piece(index, piece_length, piece_hash))
-            
-        return pieces_list
-    
