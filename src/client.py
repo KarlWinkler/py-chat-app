@@ -1,24 +1,22 @@
 from threading import Thread
 from peer import Peer
 from torrent import Torrent
-from message import Handshake
+from tracker import Tracker
 import random
-import requests
-import bencode
-import sys
 import time
 import select
 import socket
 
 
-# Time between tracker requests used if not specified by tracker
-DEFAULT_TRACKER_INTERVAL = 9
+# Maximum number of retries before moving onto the next tracker
+MAX_TRACKER_RETRIES = 3
 
 
 class Client():
     def __init__(self, address: str, port: int):
         self.client_peer = Peer(address, port, Client.generate_peer_id(), False)
         self.connected_peers: dict[str, Peer] = {}
+        self.current_tracker_url = None
         self.thread = None
         self.running = False
         self.seeding = False
@@ -33,37 +31,41 @@ class Client():
         return '-FA0000-' + ''.join(random.choices('0123456789', k=12))
 
 
-    """ Retrieve list of peers from a tracker """
-    def send_tracker_request(self, tracker_url: str, info_hash: str, event: str = "started", compact: int = 0):
-        # Create request payload
-        request_payload = {
-            "info_hash": info_hash,
-            "peer_id": self.client_peer.peer_id,
-            "port": self.client_peer.port,
-            "uploaded": 0,
-            "downloaded": 0,
-            "left": 1000, #TODO: How much of file is left to download
-            "event": event,
-            "compact": compact
-        }
+    def try_tracker_urls(self, torrent: Torrent, tracker_urls: list):
+        latest_response = None
 
-        # Send GET request to tracker
-        tracker_response = requests.get(tracker_url, request_payload, timeout=5)
-        response_text = bencode.decode(tracker_response.text)
+        for tracker_url in tracker_urls:
+            print(f"Attemping to connect to tracker {tracker_url}")
 
-        if tracker_response.status_code != 200:
-            print(f"Failed to get peer list from tracker: {response_text["failure reason"]}", file=sys.stderr)
+            tracker_response = Tracker.send_tracker_request(
+                self.client_peer.peer_id,
+                self.client_peer.port,
+                tracker_url,
+                torrent.info_hash
+            )
+            latest_response = tracker_response
 
-        # Decode the response to retrieve the dictionary
-        tracker_response = [tracker_response.status_code, response_text]
+            if tracker_response[0] == 200:
+                self.current_tracker_url = tracker_url
+                return tracker_response
+            
 
-        return tracker_response
+        return latest_response
+
+
+    def join_swarm(self, torrent: Torrent):
+        # Already in swarm, ping current tracker
+        if self.current_tracker_url:
+            tracker_response = self.try_tracker_urls(torrent, [self.current_tracker_url])
+
+            if tracker_response[0] == 200:
+                return tracker_response
+
+        # Not in swarm or lost connection with current tracker
+        return self.try_tracker_urls(torrent, torrent.tracker_list["http"])
 
 
     def try_connect_to_peer(self, info_hash: str, peer_info: dict):
-        if self.connected_peers.get(peer_info["peer id"]):
-            return False
-
         peer = Peer(
             peer_info["ip"],
             peer_info["port"],
@@ -72,60 +74,56 @@ class Client():
         connected = peer.request_connection()
 
         if connected and peer.initiate_handshake(info_hash, self.client_peer.peer_id, peer.peer_id):
-            self.connected_peers[peer.peer_id] = peer
             return peer
+        
+        return None
+
+
+    def connect_to_peers(self, info_hash: str, tracker_response: dict):
+        for peer_info in tracker_response["peers"]:
+            if self.connected_peers.get(peer_info["peer id"]):
+                continue
+
+            if peer := self.try_connect_to_peer(info_hash, peer_info):
+                self.connected_peers[peer.peer_id] = peer
+
+                print(f"Connected to: {peer.peer_id, peer.address, peer.port}")
+                print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
 
 
     """Periodically send requests to all available trackers for a torrent until successful"""
-    def handle_tracker_requests(self, torrent: Torrent, tracker_url: str):
+    def handle_tracker_requests(self, torrent: Torrent):
         try:
             while self.running:
-                # TODO: Support for multiple trackers at a time
-                # for tracker_url in self.torrent.tracker_list["http"]:
-                status_code, response = self.send_tracker_request(tracker_url, torrent.info_hash)
+                status_code, response = self.join_swarm(torrent)
 
-                if status_code == 200:
-                    if not self.seeding:
-                        for peer_info in response["peers"]:
-                            peer = self.try_connect_to_peer(torrent.info_hash, peer_info)
+                if not self.seeding and status_code == 200:
+                    self.connect_to_peers(torrent.info_hash, response)
 
-                            if peer:
-                                print(f"Connected to: {peer.peer_id, peer.address, peer.port}")
-                                print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
-
-                    time.sleep(response["interval"])
-                else:
-                    # Default interval in case request was unsuccessful
-                    time.sleep(DEFAULT_TRACKER_INTERVAL)
+                time.sleep(response.get("interval", Tracker.DEFAULT_TRACKER_INTERVAL))
         except (SystemExit, KeyboardInterrupt):
             self.stop()
 
 
-    def start_tracker_requests(self, torrent: Torrent, tracker_url: str, seeding: bool):
+    def start_tracker_requests(self, torrent: Torrent):
         if self.running: return
-
         self.running = True
-        self.seeding = seeding
 
-        # TODO: Remove
-        if self.seeding:
-            print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address, self.client_peer.port)
-        else:
-            print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address)
-
-        self.thread = Thread(target = self.handle_tracker_requests, args=(torrent,tracker_url,))
+        self.thread = Thread(target = self.handle_tracker_requests, args=(torrent,))
         self.thread.daemon = True
         self.thread.start()
 
 
-    def start_downloading(self, torrent: Torrent, tracker_url: str):
-        self.start_tracker_requests(torrent, tracker_url, False)
+    def start_downloading(self, torrent: Torrent):
+        self.start_tracker_requests(torrent)
+
+        print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address)
 
         try:
             while self.running:
                 #Request pieces and download from connected peers
 
-                time.sleep(DEFAULT_TRACKER_INTERVAL)
+                time.sleep(Tracker.DEFAULT_TRACKER_INTERVAL)
 
         except (SystemExit, KeyboardInterrupt):
             self.stop()
@@ -138,10 +136,13 @@ class Client():
         return None
 
 
-    def start_seeding(self, torrent: Torrent, tracker_url: str):
-        self.start_tracker_requests(torrent, tracker_url, True)
+    def start_seeding(self, torrent: Torrent):
+        self.start_tracker_requests(torrent)
 
         self.client_peer.start_listening()
+        self.seeding = True
+
+        print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address, self.client_peer.port)
 
         try:
             while self.running:
@@ -151,16 +152,19 @@ class Client():
                 for sock in readable:
                     if sock == self.client_peer.socket:
                         peer = self.client_peer.accept_connection()
-                        if not peer: continue
+                        if not peer:
+                            continue
 
                         print(f"Accepted connection from: {peer.address, peer.port}")
 
-                        handshake = peer.respond_handshake(torrent.info_hash, self.client_peer.peer_id)
-                        if handshake:
-                            peer.peer_id = handshake.peer_id
-                            self.connected_peers[peer.peer_id] = peer
+                        received_handshake = peer.respond_handshake(torrent.info_hash, self.client_peer.peer_id)
+                        if not received_handshake:
+                            continue
 
-                            print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
+                        peer.peer_id = received_handshake.peer_id
+                        self.connected_peers[peer.peer_id] = peer
+
+                        print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
                     else:
                         sock: socket.socket
 

@@ -4,10 +4,10 @@ from prettytable import PrettyTable
 import bencode
 import time
 import urllib.parse
+import requests
+import sys
 
 
-# Remove peers from the peer list who do not request continuous updates from the tracker after this many seconds
-PEER_INACTIVITY_TIMEOUT = 10
 DEBUG_MODE = True
 
 
@@ -80,6 +80,12 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
 
 
 class Tracker():
+    # Remove peers from the peer list who do not request continuous updates from the tracker after this many seconds
+    PEER_INACTIVITY_TIMEOUT = 10
+    # Time between tracker requests used if not specified by tracker
+    DEFAULT_TRACKER_INTERVAL = 9
+
+
     def __init__(self, address: str, port: int, interval: int = 9):
         self.port = port
         self.running = False
@@ -133,7 +139,7 @@ class Tracker():
 
         for peer_id, peer in self.torrents[info_hash].items():
             timestamp = peer[2]
-            if time.time() - timestamp >= PEER_INACTIVITY_TIMEOUT:
+            if time.time() - timestamp >= Tracker.PEER_INACTIVITY_TIMEOUT:
                 peers_to_remove.append(peer_id)
 
         for peer_id in peers_to_remove:
@@ -154,7 +160,37 @@ class Tracker():
 
         except (SystemExit, KeyboardInterrupt):
             self.running = False
-    
+
+
+    """ Retrieve list of peers from a tracker """
+    @classmethod
+    def send_tracker_request(cls, peer_id: str, peer_port: int, tracker_url: str, info_hash: str, event: str = "started", compact: int = 0):
+        # Create request payload
+        request_payload = {
+            "info_hash": info_hash,
+            "peer_id": peer_id,
+            "port": peer_port,
+            "uploaded": 0,
+            "downloaded": 0,
+            "left": 1000,
+            "event": event,
+            "compact": compact
+        }
+
+        # Send GET request to tracker
+        try:
+            tracker_response = requests.get(tracker_url, request_payload, timeout=5)
+        except requests.exceptions.ConnectionError:
+            return [503, {"failure reason": "Service unavailable: No response"}]
+
+        # Decode the response to retrieve the dictionary
+        response_text = bencode.decode(tracker_response.text)
+
+        if tracker_response.status_code != 200:
+            print(f"Failed to get peer list from tracker: {response_text["failure reason"]}", file=sys.stderr)
+
+        return [tracker_response.status_code, response_text]
+
 
     def start(self, new_thread: bool = False):
         self.running = True

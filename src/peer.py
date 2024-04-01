@@ -144,8 +144,9 @@ class Peer():
 
         except Exception as e:
             print(f"Failed to accept connection request: {e}", file=sys.stderr)
-        finally:
-            return peer
+            return None
+
+        return peer
 
 
     def disconnect(self):
