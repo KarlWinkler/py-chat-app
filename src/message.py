@@ -19,7 +19,6 @@ BITFIELD_ID = 5
 REQUEST_ID = 6
 PIECE_ID = 7
 
-
 class Message():
     def __init__(self, message_length: int):
         self.message_length = message_length
@@ -98,6 +97,39 @@ class KeepAlive(Message):
             raise Exception("Malformed KeepAlive message")
 
         return KeepAlive()
+
+
+class Bitfield(Message):
+    PAYLOAD_LENGTH = None
+
+    def __init__(self, bifield: BitArray):
+        super().__init__(PEER_WIRE_MESSAGE_LENGTH)
+        self.payload_length = 1
+        self.message_id = BITFIELD_ID
+        self.bifield = bifield
+        self.raw_bitfield = self.bifield.tobytes()
+        self.PAYLOAD_LENGTH = len(self.bifield)
+        self.message_length = PEER_WIRE_MESSAGE_LENGTH + self.PAYLOAD_LENGTH
+
+
+    def to_bytes(self):
+        message = struct.pack("!IB", self.payload_length, self.message_id)
+        message += struct.pack("!{}s".format(self.PAYLOAD_LENGTH), self.raw_bitfield)
+
+        return message
+
+
+    @classmethod
+    def from_bytes(cls, raw_message: bytes):
+        payload_length, message_id = struct.unpack("!IB", raw_message[:PEER_WIRE_MESSAGE_LENGTH])
+
+        if message_id != BITFIELD_ID:
+            raise Exception("Malformed Bitfield message")
+        
+        raw_bitfield = struct.unpack("!{}s".format(cls.PAYLOAD_LENGTH), raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + cls.PAYLOAD_LENGTH])
+        bitfield = BitArray(bytes=raw_bitfield)
+
+        return Bitfield(bitfield)
 
 
 class Choke(Message):
@@ -213,39 +245,6 @@ class Have(Message):
         return Have(piece_index)
 
 
-class Bitfield(Message):
-    PAYLOAD_LENGTH = None
-
-    def __init__(self, bifield: BitArray):
-        super().__init__(PEER_WIRE_MESSAGE_LENGTH)
-        self.payload_length = 1
-        self.message_id = BITFIELD_ID
-        self.bifield = bifield
-        self.raw_bitfield = self.bifield.tobytes()
-        self.PAYLOAD_LENGTH = len(self.bifield)
-        self.message_length = PEER_WIRE_MESSAGE_LENGTH + self.PAYLOAD_LENGTH
-
-
-    def to_bytes(self):
-        message = struct.pack("!IB", self.payload_length, self.message_id)
-        message += struct.pack("!{}s".format(self.PAYLOAD_LENGTH), self.raw_bitfield)
-
-        return message
-
-
-    @classmethod
-    def from_bytes(cls, raw_message: bytes):
-        payload_length, message_id = struct.unpack("!IB", raw_message[:PEER_WIRE_MESSAGE_LENGTH])
-
-        if message_id != BITFIELD_ID:
-            raise Exception("Malformed Bitfield message")
-        
-        raw_bitfield = struct.unpack("!{}s".format(cls.PAYLOAD_LENGTH), raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + cls.PAYLOAD_LENGTH])
-        bitfield = BitArray(bytes=raw_bitfield)
-
-        return Have(bitfield)
-
-
 class Request(Message):
     PAYLOAD_LENGTH = 4*3
 
@@ -316,7 +315,7 @@ class Piece(Message):
         piece_length = len(raw_message) - 13
         piece_index, piece_offset, piece = struct.unpack("!II{}s".format(piece_length), raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + 4*2 + piece_length])
 
-        return Have(piece_length, piece_index, piece_offset, piece)
+        return Piece(piece_length, piece_index, piece_offset, piece)
 
 
 

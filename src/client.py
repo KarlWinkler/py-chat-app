@@ -7,14 +7,13 @@ import time
 import select
 import socket
 
-
-# Maximum number of retries before moving onto the next tracker
-MAX_TRACKER_RETRIES = 3
-
+CLIENT_ID = "FA"
+CLIENT_VERSION = "0000"
 
 class Client():
-    def __init__(self, address: str, port: int):
+    def __init__(self, address: str, port: int, save_path: str):
         self.client_peer = Peer(address, port, Client.generate_peer_id(), False)
+        self.save_path = save_path
         self.connected_peers: dict[str, Peer] = {}
         self.current_tracker_url = None
         self.thread = None
@@ -28,7 +27,7 @@ class Client():
     """
     @staticmethod
     def generate_peer_id():
-        return '-FA0000-' + ''.join(random.choices('0123456789', k=12))
+        return '-' + CLIENT_ID + CLIENT_VERSION + '-' + ''.join(random.choices('0123456789', k=12))
 
 
     def try_tracker_urls(self, torrent: Torrent, tracker_urls: list):
@@ -61,7 +60,10 @@ class Client():
                 return tracker_response
 
         # Not in swarm or lost connection with current tracker
-        return self.try_tracker_urls(torrent, torrent.tracker_list["http"])
+        if torrent.tracker_list.get("http"):
+            return self.try_tracker_urls(torrent, torrent.tracker_list["http"])
+        
+        return None
 
 
     def try_connect_to_peer(self, info_hash: str, peer_info: dict):
@@ -95,12 +97,18 @@ class Client():
     def handle_tracker_requests(self, torrent: Torrent):
         try:
             while self.running:
-                status_code, response = self.join_swarm(torrent)
+                tracker_response = self.join_swarm(torrent)
 
-                if not self.seeding and status_code == 200:
-                    self.connect_to_peers(torrent.info_hash, response)
+                if tracker_response:
+                    status_code = tracker_response[0]
+                    response_dict: dict = tracker_response[1]
 
-                time.sleep(response.get("interval", Tracker.DEFAULT_TRACKER_INTERVAL))
+                    if not self.seeding and status_code == 200:
+                        self.connect_to_peers(torrent.info_hash, response_dict)
+
+                    time.sleep(response_dict.get("interval", Tracker.DEFAULT_TRACKER_INTERVAL))
+                else:
+                    time.sleep(Tracker.DEFAULT_TRACKER_INTERVAL)
         except (SystemExit, KeyboardInterrupt):
             self.stop()
 
@@ -179,7 +187,11 @@ class Client():
 
 
     def stop(self):
-        self.running = False
+        if self.running:
+            self.running = False
+            # if self.thread:
+            #     self.thread.join()
+            #     self.thread = None
 
 
     def __del__(self):
