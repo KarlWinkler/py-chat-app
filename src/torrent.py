@@ -73,8 +73,7 @@ class Torrent():
         torrent.bitfield = BitArray([0]*torrent.piece_count)
         torrent.info_hash = hashlib.sha1(urllib.parse.urlencode(info).encode()).digest()
 
-        hash_count = Piece.get_hash_count(torrent.piece_hashes)
-        if torrent.piece_count != hash_count:
+        if torrent.piece_count != Piece.get_hash_count(torrent.piece_hashes):
             raise Exception("Total length of file does not match number of piece hashes")
 
         # Optional info included in some torrents
@@ -103,11 +102,8 @@ class Torrent():
         return tracker_list
 
 
-    def load_pieces(self):
-        pass
-
-
-    def load_sparse_files(self, save_path: str):
+    # load pieces which have already been downloaded from disk
+    def load_pieces(self, save_path: str):
         # Create parent directories if they don't exist
         Path(save_path).mkdir(parents=True, exist_ok=True)
 
@@ -118,15 +114,18 @@ class Torrent():
         # TODO: retrieve length of sparse file (in place of 0)
         self.pieces = Piece.create_pieces(self.piece_hashes, 0, self.piece_length)
 
+        for piece in self.pieces:
+            if piece.is_full():
+                self.bitfield.set(value=1, pos=piece.index)
+
+        #print(self)
+
         # with open(file_path, "w+") as file:
         #     pass
         #     #self.sparse_file = sparse_file.open_sparse(file_path, "wb+")
 
 
-    def save_sparse_file(self):
-        pass
-
-
+    # when client downloads a new piece, we need to update the list
     def write_piece(self, piece: Piece):
         self.bitfield.set(value=1, pos=piece.index)
         self.pieces[piece.index] = piece

@@ -54,6 +54,6 @@ class Piece:
         return hashlib.sha1(raw_data) == self.expected_hash
 
 
-    def get_contents(self):
+    def is_full(self):
         return self._contents
 

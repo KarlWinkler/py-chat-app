@@ -42,7 +42,7 @@ def run_tracker(address: str, port: int):
 # Make sure at least one tracker is running before 
 def run_downloader():
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
-    torrent.load_sparse_files(SAVE_PATH)
+    torrent.load_pieces(SAVE_PATH)
 
     client = Client("127.0.0.1", 32225, SAVE_PATH)
     client.start_downloading(torrent)
@@ -51,7 +51,7 @@ def run_downloader():
 
 def run_seeder():
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
-    torrent.load_sparse_files(SAVE_PATH)
+    torrent.load_pieces(SAVE_PATH)
 
     client = Client("127.0.0.1", 34445, SAVE_PATH)
     client.start_seeding(torrent)
