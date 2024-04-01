@@ -11,10 +11,11 @@ KEEP_ALIVE_TIMEOUT = 10
 
 
 class Peer():
-    def __init__(self, address: str, port: int, peer_id: str = None, sock: socket.socket = None):
+    def __init__(self, address: str, port: int, peer_id: str = None, seeding: bool = False, sock: socket.socket = None):
         self.address = address
         self.port = port
         self.peer_id = peer_id
+        self.seeding = seeding
 
         self.socket = sock if sock else socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.settimeout(KEEP_ALIVE_TIMEOUT)

@@ -35,13 +35,12 @@ class Client():
         latest_response = None
 
         for tracker_url in tracker_urls:
-            print(f"Attemping to connect to tracker {tracker_url}")
-
             tracker_response = Tracker.send_tracker_request(
                 self.client_peer.peer_id,
                 self.client_peer.port,
                 tracker_url,
-                torrent.info_hash
+                torrent.info_hash,
+                self.seeding
             )
             latest_response = tracker_response
 
@@ -69,7 +68,8 @@ class Client():
         peer = Peer(
             peer_info["ip"],
             peer_info["port"],
-            peer_info["peer id"]
+            peer_info["peer id"],
+            peer_info["seeding"]
         )
         connected = peer.request_connection()
 
@@ -81,7 +81,7 @@ class Client():
 
     def connect_to_peers(self, info_hash: str, tracker_response: dict):
         for peer_info in tracker_response["peers"]:
-            if self.connected_peers.get(peer_info["peer id"]):
+            if self.connected_peers.get(peer_info["peer id"]) or not peer_info["seeding"]:
                 continue
 
             if peer := self.try_connect_to_peer(info_hash, peer_info):

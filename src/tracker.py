@@ -31,6 +31,7 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
         peer_port = query_params.get("port")[0]
         info_hash = query_params.get("info_hash")[0]
         event = query_params.get("event")[0]
+        seeding = query_params.get("seeding")[0].lower() == "true"
 
         try:
             peer_port = int(peer_port)
@@ -39,7 +40,7 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
             return
 
         if event == "started":
-            self.tracker.try_add_peer(info_hash, peer_id, peer_address, peer_port)
+            self.tracker.try_add_peer(info_hash, peer_id, peer_address, peer_port, seeding)
         elif event == "stopped":
             # Peer has requested to remove itself from the peer list
             self.tracker.remove_peer(info_hash, peer_id)
@@ -114,20 +115,37 @@ class Tracker():
                 peer_data = {
                     "peer id": peer_id,
                     "ip": peer[0],
-                    "port": peer[1]
+                    "port": peer[1],
+                    "seeding": peer[2]
                 }
                 peers.append(peer_data)
         
         return peers
 
 
-    def try_add_peer(self, info_hash: str, peer_id: str, address: str, port: int):
-        peer_tuple = (address, port, time.time())
+    def has_peer(self, info_hash: str, address: str, port: int):
+        if not self.torrents.get(info_hash):
+            return False
+        
+        for peer_tuple in self.torrents[info_hash].values():
+            if peer_tuple[0] == address and peer_tuple[1] == port:
+                return True
+
+        return False
+
+
+    def try_add_peer(self, info_hash: str, peer_id: str, address: str, port: int, seeding: bool):
+        if self.has_peer(info_hash, address, port):
+            return False
+
+        peer_tuple = (address, port, seeding, time.time())
 
         if info_hash in self.torrents:
             self.torrents[info_hash][peer_id] = peer_tuple
         else:
             self.torrents[info_hash] = {peer_id: peer_tuple}
+        
+        return True
     
 
     def remove_peer(self, info_hash, peer_id):
@@ -138,13 +156,13 @@ class Tracker():
         peers_to_remove = []
 
         for peer_id, peer in self.torrents[info_hash].items():
-            timestamp = peer[2]
+            timestamp = peer[3]
             if time.time() - timestamp >= Tracker.PEER_INACTIVITY_TIMEOUT:
                 peers_to_remove.append(peer_id)
 
         for peer_id in peers_to_remove:
             if DEBUG_MODE:
-                print("Dead peer removed: ", peer[0], peer[1], time.time() - peer[2])
+                print("Dead peer removed: ", peer[0], peer[1], time.time() - peer[3])
             self.remove_peer(info_hash, peer_id)
 
 
@@ -164,7 +182,14 @@ class Tracker():
 
     """ Retrieve list of peers from a tracker """
     @classmethod
-    def send_tracker_request(cls, peer_id: str, peer_port: int, tracker_url: str, info_hash: str, event: str = "started", compact: int = 0):
+    def send_tracker_request(cls, peer_id: str,
+                             peer_port: int,
+                             tracker_url: str,
+                             info_hash: str,
+                             seeding: bool = False,
+                             event: str = "started",
+                             compact: int = 0):
+
         # Create request payload
         request_payload = {
             "info_hash": info_hash,
@@ -174,7 +199,8 @@ class Tracker():
             "downloaded": 0,
             "left": 1000,
             "event": event,
-            "compact": compact
+            "compact": compact,
+            "seeding": seeding
         }
 
         # Send GET request to tracker
@@ -212,11 +238,11 @@ class Tracker():
 
     def __str__(self):
         table = PrettyTable()
-        table.field_names = ["Peer ID", "IP", "Port"]
+        table.field_names = ["Peer ID", "IP", "Port", "Seeding"]
 
         for info_hash in self.torrents:
             for peer_id, peer in self.torrents[info_hash].items():
-                table.add_row([peer_id, peer[0], peer[1]])
+                table.add_row([peer_id, peer[0], peer[1], peer[2]])
         
         return table.get_string()
 
