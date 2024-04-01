@@ -1,59 +1,88 @@
+from bitstring import BitArray
+from piece import Piece
+from pathlib import Path
+import sparse_file
 import bencode
 import util
 import hashlib
 import urllib.parse
+import math
+import os
 
 class Torrent():
     def __init__(self):
-        self.data = None
+        self.data = {}
         self.tracker_list = {}
         self.created_by = None
         self.creation_date = None
         self.encoding = None
         self.piece_length = 0
-        self.pieces = None
+        self.piece_hashes = None
         self.piece_count = 0
         self.name = None
-        self.file_list = {}
+        self.file_info = {}
+        self.file_count = 0
         self.info_hash = None
         self.total_length = 0
+        self.bitfield: BitArray = None
+        self.pieces: list[Piece] = []
+        self.sparse_files = []
 
     
-    def load_from_file(self, file_path: str) -> 'Torrent':
+    @staticmethod
+    def load_metainfo_from_file(file_path: str) -> 'Torrent':
+        torrent = Torrent()
+
         # Read as binary file
         with open(file_path, "rb") as file:
-            self.data: dict = bencode.decode(file.read())
+            torrent.data = bencode.decode(file.read())
+
+        if not isinstance(torrent.data, dict):
+            raise Exception("Decoded torrent file is not a dictionary")
 
         # List of tracker urls
-        if "announce-list" in self.data:
-            self.tracker_list = Torrent.create_tracker_list(util.flatten(self.data["announce-list"]))
+        if "announce-list" in torrent.data:
+            torrent.tracker_list = Torrent.create_tracker_list(util.flatten(torrent.data["announce-list"]))
         # Single tracker url
-        elif "announce" in self.data:
-            self.tracker_list = Torrent.create_tracker_list([self.data["announce"]])
+        elif "announce" in torrent.data:
+            torrent.tracker_list = Torrent.create_tracker_list([torrent.data["announce"]])
 
-        info = self.data["info"]
+        info = torrent.data["info"]
         
         # List of files
         if "files" in info:
-            self.file_list = info["files"]
-            self.total_length = sum(file["length"] for file in self.file_list)
+            torrent.file_info = info["files"]
+            torrent.total_length = sum(file["length"] for file in torrent.file_info)
         # Single file
         else:
-            self.file_list = {"length": info["length"], "path": info["name"]}
-            self.total_length = info["length"]
+            torrent.file_info = [{"length": info["length"], "path": info["name"]}]
+            torrent.total_length = info["length"]
 
-        self.name = info["name"]
-        self.piece_length = info["piece length"]
-        self.pieces = info["pieces"]
-        self.piece_count = self.total_length // self.piece_length
-        self.info_hash = hashlib.sha1(urllib.parse.urlencode(info).encode()).digest()
+        torrent.file_count = len(torrent.file_info)
+
+        # Ensure each file only has a single path
+        for i in range(torrent.file_count):
+            path = torrent.file_info[i]["path"]
+            if isinstance(path, list):
+                torrent.file_info[i]["path"] = path[0]
+
+        torrent.name = info["name"]
+        torrent.piece_length = info["piece length"]
+        torrent.piece_hashes = info["pieces"]
+        torrent.piece_count = math.ceil(torrent.total_length / torrent.piece_length)
+        torrent.bitfield = BitArray([0]*torrent.piece_count)
+        torrent.info_hash = hashlib.sha1(urllib.parse.urlencode(info).encode()).digest()
+
+        hash_count = Piece.get_hash_count(torrent.piece_hashes)
+        if torrent.piece_count != hash_count:
+            raise Exception("Total length of file does not match number of piece hashes")
 
         # Optional info included in some torrents
-        self.created_by = self.data.get("created by")
-        self.creation_date = self.data.get("creation date")
-        self.encoding = self.data.get("encoding")
+        torrent.created_by = torrent.data.get("created by")
+        torrent.creation_date = torrent.data.get("creation date")
+        torrent.encoding = torrent.data.get("encoding")
 
-        return self
+        return torrent
 
 
     """Build list of HTTP and UDP tracker urls"""
@@ -74,3 +103,36 @@ class Torrent():
         return tracker_list
 
 
+    def load_pieces(self):
+        pass
+
+
+    def load_sparse_files(self, save_path: str):
+        # Create parent directories if they don't exist
+        Path(save_path).mkdir(parents=True, exist_ok=True)
+
+        for f_info in self.file_info:
+            file_path = os.path.join(save_path, f_info["path"])
+            self.sparse_files.append(sparse_file.open_sparse(file_path, "wb+"))
+
+        # TODO: retrieve length of sparse file (in place of 0)
+        self.pieces = Piece.create_pieces(self.piece_hashes, 0, self.piece_length)
+
+        # with open(file_path, "w+") as file:
+        #     pass
+        #     #self.sparse_file = sparse_file.open_sparse(file_path, "wb+")
+
+
+    def save_sparse_file(self):
+        pass
+
+
+    def write_piece(self, piece: Piece):
+        self.bitfield.set(value=1, pos=piece.index)
+        self.pieces[piece.index] = piece
+
+        # update sparse file
+
+
+    def __str__(self):
+        return ''.join('1' if bit else '0' for bit in self.bitfield)

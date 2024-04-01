@@ -7,9 +7,7 @@ import urllib.parse
 import requests
 import sys
 
-
 DEBUG_MODE = True
-
 
 class TrackerRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, tracker: 'Tracker', *args, **kwargs):
@@ -106,6 +104,47 @@ class Tracker():
         self.address = self._server.server_address
     
 
+    """ Retrieve list of peers from a tracker """
+    @classmethod
+    def send_tracker_request(cls, peer_id: str,
+                             peer_port: int,
+                             tracker_url: str,
+                             info_hash: str,
+                             seeding: bool = False,
+                             event: str = "started",
+                             compact: int = 0):
+
+        # Create request payload
+        request_payload = {
+            "info_hash": info_hash,
+            "peer_id": peer_id,
+            "port": peer_port,
+            "uploaded": 0,
+            "downloaded": 0,
+            "left": 1000,
+            "event": event,
+            "compact": compact,
+            "seeding": seeding
+        }
+
+        # Send GET request to tracker
+        try:
+            tracker_response = requests.get(tracker_url, request_payload, timeout=5)
+        except requests.exceptions.ConnectionError:
+            return [503, {"failure reason": "Tracker unavailable: No response"}]
+
+        # Decode the response to retrieve the dictionary
+        try:
+            response_text = bencode.decode(tracker_response.text)
+        except bencode.BencodeDecodeError:
+            return [503, {"failure reason": "Failed to decode response"}]
+
+        if tracker_response.status_code != 200:
+            print(f"Failed to get peer list from tracker: {response_text["failure reason"]}", file=sys.stderr)
+
+        return [tracker_response.status_code, response_text]
+
+
     def build_verbose_peer_list(self, info_hash: str, requesting_peer_id: str) -> list[dict]:
         peers = []
 
@@ -178,44 +217,6 @@ class Tracker():
 
         except (SystemExit, KeyboardInterrupt):
             self.running = False
-
-
-    """ Retrieve list of peers from a tracker """
-    @classmethod
-    def send_tracker_request(cls, peer_id: str,
-                             peer_port: int,
-                             tracker_url: str,
-                             info_hash: str,
-                             seeding: bool = False,
-                             event: str = "started",
-                             compact: int = 0):
-
-        # Create request payload
-        request_payload = {
-            "info_hash": info_hash,
-            "peer_id": peer_id,
-            "port": peer_port,
-            "uploaded": 0,
-            "downloaded": 0,
-            "left": 1000,
-            "event": event,
-            "compact": compact,
-            "seeding": seeding
-        }
-
-        # Send GET request to tracker
-        try:
-            tracker_response = requests.get(tracker_url, request_payload, timeout=5)
-        except requests.exceptions.ConnectionError:
-            return [503, {"failure reason": "Service unavailable: No response"}]
-
-        # Decode the response to retrieve the dictionary
-        response_text = bencode.decode(tracker_response.text)
-
-        if tracker_response.status_code != 200:
-            print(f"Failed to get peer list from tracker: {response_text["failure reason"]}", file=sys.stderr)
-
-        return [tracker_response.status_code, response_text]
 
 
     def start(self, new_thread: bool = False):

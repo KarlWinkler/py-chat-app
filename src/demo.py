@@ -2,6 +2,20 @@ from client import Client
 from tracker import Tracker
 from torrent import Torrent
 import sys
+import os
+
+DEFAULT_TRACKER_ADDRESS = "127.0.0.1"
+DEFAULT_TRACKER_PORT = 35333
+
+# Torrent that will be used in the demo
+# Bee movie torrent has trackers urls ["http://127.0.0.1:35222", "http://127.0.0.1:35333"]
+DEMO_TORRENT_PATH = "torrent_samples\\bees_local_trackers.torrent"
+# Folder where downloaded files are stored
+SAVE_PATH = os.path.join(os.environ['USERPROFILE'], 'Documents', 'FA BitTorrent Save Files')
+
+
+def test_read_bitfield():
+    pass
 
 
 def test_tracker_connection(client: Client, info_hash: str, tracker_url: str):
@@ -27,15 +41,19 @@ def run_tracker(address: str, port: int):
 
 # Make sure at least one tracker is running before 
 def run_downloader():
-    torrent = Torrent().load_from_file("torrent_samples\\localhost_tracker_demo.torrent")
-    client = Client("127.0.0.1", 32225)
+    torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
+    torrent.load_sparse_files(SAVE_PATH)
+
+    client = Client("127.0.0.1", 32225, SAVE_PATH)
     client.start_downloading(torrent)
     #self.test_tracker_connection(client, torrent.info_hash, f"http://127.0.0.1:35222")
 
 
 def run_seeder():
-    torrent = Torrent().load_from_file("torrent_samples\\localhost_tracker_demo.torrent")
-    client = Client("127.0.0.1", 34445)
+    torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
+    torrent.load_sparse_files(SAVE_PATH)
+
+    client = Client("127.0.0.1", 34445, SAVE_PATH)
     client.start_seeding(torrent)
 
 
@@ -48,8 +66,8 @@ def main():
         run_seeder()
     elif endpoint_type == "2":
         try:
-            address = input("Enter IP address (default=127.0.0.1): ") or "127.0.0.1"
-            port = input("Enter port (default=35333): ") or 35333
+            address = input(f"Enter IP address (default={DEFAULT_TRACKER_ADDRESS}): ") or DEFAULT_TRACKER_ADDRESS
+            port = input(f"Enter port (default={DEFAULT_TRACKER_PORT}): ") or DEFAULT_TRACKER_PORT
             port = int(port)
         except ValueError:
             print("Invalid option, exiting", file=sys.stderr)

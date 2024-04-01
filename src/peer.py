@@ -3,12 +3,10 @@ import peer_state
 import socket
 import message
 
-
 # Maximum number of connections allowed by the socket
 MAX_PEER_REQUESTS = 20
 # Socket timeout
 KEEP_ALIVE_TIMEOUT = 10
-
 
 class Peer():
     def __init__(self, address: str, port: int, peer_id: str = None, seeding: bool = False, sock: socket.socket = None):
@@ -23,6 +21,11 @@ class Peer():
         self.state = peer_state.INITIAL
         self.connected = False
         self.completed_handshake = False
+
+
+    # parse message type
+    #def send_message
+    #def receive_message
 
 
     """Send handshake before receive (for downloading peers)"""
