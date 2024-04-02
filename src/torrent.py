@@ -26,7 +26,7 @@ class Torrent():
         self.total_length = 0
         self.bitfield: BitArray = None
         self.pieces: list[Piece] = []
-        self.sparse_files = []
+        self.files = []
 
     
     @staticmethod
@@ -109,20 +109,58 @@ class Torrent():
 
         for f_info in self.file_info:
             file_path = os.path.join(save_path, f_info["path"])
-            self.sparse_files.append(sparse_file.open_sparse(file_path, "wb+"))
+
+            fill_holes = False
+            if not os.path.exists(file_path):
+                fill_holes = True
+
+            file = open(os.path.join(save_path, file_path), "ab+")
+            self.files.append(file)
+
+            if fill_holes:
+                offset = 0
+                while offset < self.total_length:
+                    print("filling holes")
+                    file.hole(offset, self.piece_length)
+                    offset += self.piece_length
+
+            self.pieces = Piece.create_pieces(self.piece_hashes, 0, self.piece_length)
+
+            file2 = open(os.path.join(save_path, self.file_info[1]["path"]), "ab+")
+
+            bytes_read = 0
+            piece_index = 0
+
+            while bytes_read < self.total_length:
+                chunk = file.read(self.piece_length)
+                if not chunk:
+                    print("chunk ", chunk)
+                    break
+                # If the chunk is shorter than the piece length, grab the rest of the chunk from the next file
+                if len(chunk) < self.piece_length:
+                    remaining_bytes = self.piece_length - len(chunk)
+                    remaining_chunk = file2.read(remaining_bytes)
+                    chunk += remaining_chunk
+                    #chunk = chunk.ljust(self.piece_length, b"\x00")
+                chunk_hash = hashlib.sha1(chunk).digest()
+
+                print("EXPECTED HASH", self.pieces[piece_index].expected_hash)
+                print("CHUNK HASH ", chunk_hash)
+                print()
+
+                bytes_read += len(chunk)
+                piece_index += 1
+            
+            break
 
         # TODO: retrieve length of sparse file (in place of 0)
-        self.pieces = Piece.create_pieces(self.piece_hashes, 0, self.piece_length)
+        #self.pieces = Piece.create_pieces(self.piece_hashes, 0, self.piece_length)
 
         for piece in self.pieces:
             if piece.is_full():
                 self.bitfield.set(value=1, pos=piece.index)
 
         #print(self)
-
-        # with open(file_path, "w+") as file:
-        #     pass
-        #     #self.sparse_file = sparse_file.open_sparse(file_path, "wb+")
 
 
     # when client downloads a new piece, we need to update the list

@@ -46,23 +46,22 @@ class Client():
             if tracker_response[0] == 200:
                 self.current_tracker_url = tracker_url
                 return tracker_response
-            
 
         return latest_response
 
 
     def join_swarm(self, torrent: Torrent):
-        # Already in swarm, ping current tracker
+        # Already in swarm, send GET to current tracker
         if self.current_tracker_url:
             tracker_response = self.try_tracker_urls(torrent, [self.current_tracker_url])
-
+            # Check if status code is success
             if tracker_response[0] == 200:
                 return tracker_response
 
         # Not in swarm or lost connection with current tracker
-        if torrent.tracker_list.get("http"):
-            return self.try_tracker_urls(torrent, torrent.tracker_list["http"])
-        
+        if tracker_urls := torrent.tracker_list.get("http"):
+            return self.try_tracker_urls(torrent, tracker_urls)
+
         return None
 
 
@@ -83,9 +82,9 @@ class Client():
 
     def connect_to_peers(self, info_hash: str, tracker_response: dict):
         for peer_info in tracker_response["peers"]:
+            # Only attempt to connect with seeding peers
             if self.connected_peers.get(peer_info["peer id"]) or not peer_info["seeding"]:
                 continue
-
             if peer := self.try_connect_to_peer(info_hash, peer_info):
                 self.connected_peers[peer.peer_id] = peer
 
@@ -187,11 +186,7 @@ class Client():
 
 
     def stop(self):
-        if self.running:
-            self.running = False
-            # if self.thread:
-            #     self.thread.join()
-            #     self.thread = None
+        self.running = False
 
 
     def __del__(self):

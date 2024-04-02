@@ -83,6 +83,7 @@ class Tracker():
     PEER_INACTIVITY_TIMEOUT = 10
     # Time between tracker requests used if not specified by tracker
     DEFAULT_TRACKER_INTERVAL = 9
+    MAX_PEERS = 50
 
 
     def __init__(self, address: str, port: int, interval: int = 9):
@@ -92,6 +93,7 @@ class Tracker():
         self.torrents = {str: {}}
         self.tracker_id = 0 # TODO: Unique tracker ids are not needed currently
         self.thread = None
+        self.count = 0
 
         self._server = HTTPServer(
             # Empty string automatically defaults to loopback address
@@ -162,6 +164,10 @@ class Tracker():
         return peers
 
 
+    def get_peer_count(self):
+        return sum(len(self.torrents[info_hash]) for info_hash in self.torrents)
+
+
     def has_peer(self, info_hash: str, address: str, port: int):
         if not self.torrents.get(info_hash):
             return False
@@ -172,9 +178,8 @@ class Tracker():
 
         return False
 
-
     def try_add_peer(self, info_hash: str, peer_id: str, address: str, port: int, seeding: bool):
-        if self.has_peer(info_hash, address, port):
+        if self.has_peer(info_hash, address, port) or self.get_peer_count() == Tracker.MAX_PEERS:
             return False
 
         peer_tuple = (address, port, seeding, time.time())
@@ -239,12 +244,12 @@ class Tracker():
 
     def __str__(self):
         table = PrettyTable()
-        table.field_names = ["Peer ID", "IP", "Port", "Seeding"]
+        table.field_names = ["Peer ID", "IP Address", "Port", "Seeding"]
 
         for info_hash in self.torrents:
             for peer_id, peer in self.torrents[info_hash].items():
                 table.add_row([peer_id, peer[0], peer[1], peer[2]])
-        
+
         return table.get_string()
 
 

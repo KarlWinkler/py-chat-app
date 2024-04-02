@@ -44,7 +44,7 @@ def run_downloader():
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
     torrent.load_pieces(SAVE_PATH)
 
-    client = Client("127.0.0.1", 32225, SAVE_PATH)
+    client = Client("127.0.0.1", 34324, SAVE_PATH)
     client.start_downloading(torrent)
     #self.test_tracker_connection(client, torrent.info_hash, f"http://127.0.0.1:35222")
 
@@ -53,7 +53,7 @@ def run_seeder():
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
     torrent.load_pieces(SAVE_PATH)
 
-    client = Client("127.0.0.1", 34445, SAVE_PATH)
+    client = Client("127.0.0.1", 34345, SAVE_PATH)
     client.start_seeding(torrent)
 
 
