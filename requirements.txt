@@ -3,6 +3,8 @@ bitarray==2.9.2
 bitstring==4.1.4
 certifi==2024.2.2
 charset-normalizer==3.3.2
+docopt==0.6.2
+httpserver==1.1.0
 idna==3.6
 prettytable==3.10.0
 python-dotenv==1.0.1
