@@ -6,6 +6,7 @@ import time
 import urllib.parse
 import requests
 import sys
+from bitstring import BitArray
 
 DEBUG_MODE = True
 
@@ -43,6 +44,8 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
         elif event == "stopped":
             # Peer has requested to remove itself from the peer list
             self.tracker.remove_peer(info_hash, peer_id)
+            if peer_id == self.tracker.leader_id:
+                self.tracker.initiate_election()
         elif event == "completed":
             # TODO: Handle actions when peer is finished downloading
             pass
@@ -95,6 +98,7 @@ class Tracker():
         self.tracker_id = 0 # TODO: Unique tracker ids are not needed currently
         self.thread = None
         self.count = 0
+        self.leader_id = None
 
         self._server = HTTPServer(
             # Empty string automatically defaults to loopback address
@@ -200,6 +204,8 @@ class Tracker():
 
     def remove_peer(self, info_hash, peer_id):
         del self.torrents[info_hash][peer_id]
+        if peer_id == self.leader_id:
+            self.initiate_election()
 
 
     def remove_unresponsive_peers(self, info_hash: str):
@@ -214,7 +220,20 @@ class Tracker():
             if DEBUG_MODE:
                 print("Dead peer removed: ", peer[0], peer[1], time.time() - peer[3])
             self.remove_peer(info_hash, peer_id)
-
+            if peer_id == self.leader_id:
+                self.initiate_election()
+    
+    def initiate_election(self):
+        all_peers = []
+        for info_hash, peers in self.torrents.items():
+            for peer_id, peer_info in peers.items():
+                all_peers.append(peer_id)
+        
+        highest_peer_id = max(all_peers, key=lambda x: int(x[0]))
+        self.leader_id = highest_peer_id
+        
+    def get_leader(self):
+        return self.leader_id
 
     def handle_requests(self):
         if DEBUG_MODE:
