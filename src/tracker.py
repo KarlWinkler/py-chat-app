@@ -208,6 +208,7 @@ class Tracker():
             self.initiate_election()
 
 
+<<<<<<< HEAD
     def remove_unresponsive_peers(self, info_hash: str):
         peers_to_remove = []
 
@@ -283,3 +284,18 @@ class Tracker():
         self.stop()
         self._server.server_close()
 
+=======
+    def stop_listening():
+        pass
+
+def main(address='localhost', port=8080):
+    tracker = Tracker(address, port, debug_mode=True)
+    tracker.listen_for_peer_requests()
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1:
+        main(sys.argv[1], int(sys.argv[2]))
+    else:
+        main()
+>>>>>>> origin/Hari
