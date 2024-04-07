@@ -32,25 +32,41 @@ class Peer():
             return False
         
         block: Block = piece.blocks[block_index]
-        #print("Block:", piece.length, piece.index, block_index)
-        #print(block.data)
         msg = message.Piece(block.block_size, piece.index, block_index, block.data)
 
         if not self.send_data(msg.to_bytes()):
             return None
 
-        #print("Decoded block:", msg.block_length, msg.piece_index, msg.block_length, msg.block_index)
-        #print("HASH MATCH:", hashlib.sha1(block.data).digest() == hashlib.sha1(msg.block_data).digest())
-        
         return True
 
 
-    def recv_block(self):
+    def recv_message(self):
         raw_header = self.receive_data(message.PEER_WIRE_MESSAGE_LENGTH)
+        if raw_header is None:
+            return None
 
-        if raw_header:
-            payload_length, message_id = struct.unpack("!IB", raw_header)
-            print(message_id)
+        payload_length, message_id = struct.unpack("!IB", raw_header)
+
+        if message_id == message.CHOKE_ID:
+            pass
+        elif message_id == message.UNCHOKE_ID:
+            pass
+        elif message_id == message.INTERESTED_ID:
+            pass
+        elif message_id == message.NOT_INTERESTED_ID:
+            pass
+        elif message_id == message.HAVE_ID:
+            pass
+        elif message_id == message.BITFIELD_ID:
+            pass
+        elif message_id == message.REQUEST_ID:
+            pass
+        elif message_id == message.PIECE_ID:
+            self.recv_block(raw_header)
+
+
+    def recv_block(self, raw_header):
+        print(f"Received block")
 
 
     """Send handshake before receive (for downloading peers)"""
