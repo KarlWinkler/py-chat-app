@@ -9,7 +9,7 @@ DEFAULT_TRACKER_PORT = 35333
 
 # Torrent that will be used in the demo
 # Bee movie torrent has trackers urls ["http://127.0.0.1:35222", "http://127.0.0.1:35333"]
-DEMO_TORRENT_PATH = "torrent_samples\\bees_local_trackers.torrent"
+DEMO_TORRENT_PATH = "torrent_samples\\bee_movie_local_trackers.torrent"
 # Folder where downloaded files are stored
 SAVE_PATH = os.path.join(os.environ['USERPROFILE'], 'Documents', 'FA BitTorrent Save Files')
 

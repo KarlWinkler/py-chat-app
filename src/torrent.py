@@ -102,7 +102,7 @@ class Torrent():
         return tracker_list
 
 
-    # load pieces which have already been downloaded from disk
+    # load pieces from disk which have already been downloaded
     def load_pieces(self, save_path: str):
         # Create parent directories if they don't exist
         Path(save_path).mkdir(parents=True, exist_ok=True)
@@ -111,22 +111,27 @@ class Torrent():
             file_path = os.path.join(save_path, f_info["path"])
 
             fill_holes = False
-            if not os.path.exists(file_path):
-                fill_holes = True
+            file = None
 
-            file = open(os.path.join(save_path, file_path), "ab+")
+            if not os.path.exists(file_path):
+                file = open(os.path.join(save_path, file_path), "wb+")
+                fill_holes = True
+            else:
+                file = open(os.path.join(save_path, file_path), "rb+")
+
             self.files.append(file)
+
+            #print(file)
 
             if fill_holes:
                 offset = 0
                 while offset < self.total_length:
-                    print("filling holes")
-                    file.hole(offset, self.piece_length)
-                    offset += self.piece_length
+                    file.write(b'\x01')
+                    offset += 1
 
             self.pieces = Piece.create_pieces(self.piece_hashes, 0, self.piece_length)
 
-            file2 = open(os.path.join(save_path, self.file_info[1]["path"]), "ab+")
+            #file2 = open(os.path.join(save_path, self.file_info[1]["path"]), "ab+")
 
             bytes_read = 0
             piece_index = 0
@@ -137,11 +142,10 @@ class Torrent():
                     print("chunk ", chunk)
                     break
                 # If the chunk is shorter than the piece length, grab the rest of the chunk from the next file
-                if len(chunk) < self.piece_length:
-                    remaining_bytes = self.piece_length - len(chunk)
-                    remaining_chunk = file2.read(remaining_bytes)
-                    chunk += remaining_chunk
-                    #chunk = chunk.ljust(self.piece_length, b"\x00")
+                #if len(chunk) < self.piece_length:
+                    #remaining_bytes = self.piece_length - len(chunk)
+                    #remaining_chunk = file2.read(remaining_bytes)
+                    #chunk += remaining_chunk
                 chunk_hash = hashlib.sha1(chunk).digest()
 
                 print("EXPECTED HASH", self.pieces[piece_index].expected_hash)

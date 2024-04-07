@@ -2,6 +2,7 @@ import sys
 import peer_state
 import socket
 import message
+from piece import Piece
 
 # Maximum number of connections allowed by the socket
 MAX_PEER_REQUESTS = 20
@@ -26,6 +27,21 @@ class Peer():
     # parse message type
     #def send_message
     #def receive_message
+
+    def send_piece(self, piece: Piece):
+        msg = message.Piece(piece.length, piece.index, 0, piece.contents[:2**14 + 1])
+
+        if not self.send_data(msg.to_bytes()):
+            return None
+        
+        return True
+
+
+    def recv_piece(self):
+        block_length = 2**14
+        raw_header = self.receive_data(message.PEER_WIRE_MESSAGE_LENGTH)
+
+        #handshake = message.Piece.from_bytes(raw_block)
 
 
     """Send handshake before receive (for downloading peers)"""

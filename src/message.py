@@ -79,7 +79,6 @@ class Handshake(Message):
 
 
 class KeepAlive(Message):
-
     def __init__(self):
         super().__init__(PEER_WIRE_PREFIX_LENGTH)
         self.payload_length = 0
@@ -248,19 +247,19 @@ class Have(Message):
 class Request(Message):
     PAYLOAD_LENGTH = 4*3
 
-    def __init__(self, piece_index: int, piece_offset: int, piece_length: int):
+    def __init__(self, piece_index: int, block_offset: int, piece_length: int):
         super().__init__(PEER_WIRE_MESSAGE_LENGTH + self.PAYLOAD_LENGTH)
         self.payload_length = 1
         self.message_id = REQUEST_ID
         self.piece_index = piece_index
-        self.piece_offset = piece_offset
+        self.block_offset = block_offset
         self.piece_length = piece_length
 
 
     def to_bytes(self):
         message = struct.pack("!IB", self.payload_length, self.message_id)
         message += struct.pack("!I", self.piece_index)
-        message += struct.pack("!I", self.piece_offset)
+        message += struct.pack("!I", self.block_offset)
         message += struct.pack("!I", self.piece_length)
 
         return message
@@ -276,31 +275,31 @@ class Request(Message):
         if message_id != REQUEST_ID:
             raise Exception("Malformed Request message")
         
-        piece_index, piece_offset, piece_length = struct.unpack("!III", raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + cls.PAYLOAD_LENGTH])
+        piece_index, block_offset, piece_length = struct.unpack("!III", raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + cls.PAYLOAD_LENGTH])
 
-        return Request(piece_index, piece_offset, piece_length)
+        return Request(piece_index, block_offset, piece_length)
 
 
 class Piece(Message):
     PAYLOAD_LENGTH = None
 
-    def __init__(self, piece_length: int, piece_index: int, piece_offset: int, piece: bytes):
+    def __init__(self, piece_length: int, piece_index: int, block_offset: int, block: bytes):
         super().__init__(PEER_WIRE_MESSAGE_LENGTH)
         self.payload_length = 1
         self.message_id = PIECE_ID
         self.piece_length = piece_length
         self.piece_index = piece_index
-        self.piece_offset = piece_offset
-        self.piece = piece
-        self.PAYLOAD_LENGTH = 4*3 + len(self.piece)
+        self.block_offset = block_offset
+        self.block = block
+        self.PAYLOAD_LENGTH = 4*3 + len(self.block)
         self.message_length = PEER_WIRE_MESSAGE_LENGTH + self.PAYLOAD_LENGTH
 
 
     def to_bytes(self):
         message = struct.pack("!IB", self.payload_length, self.message_id)
         message += struct.pack("!I", self.piece_index)
-        message += struct.pack("!I", self.piece_offset)
-        message += struct.pack("!{}s".format(self.piece_length), self.piece)
+        message += struct.pack("!I", self.block_offset)
+        message += struct.pack("!{}s".format(self.piece_length), self.block)
 
         return message
 
@@ -313,9 +312,9 @@ class Piece(Message):
             raise Exception("Malformed Piece message")
         
         piece_length = len(raw_message) - 13
-        piece_index, piece_offset, piece = struct.unpack("!II{}s".format(piece_length), raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + 4*2 + piece_length])
+        piece_index, block_offset, block = struct.unpack("!II{}s".format(piece_length), raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + 4*2 + piece_length])
 
-        return Piece(piece_length, piece_index, piece_offset, piece)
+        return Piece(piece_length, piece_index, block_offset, block)
 
 
 

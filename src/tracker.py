@@ -80,7 +80,7 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
 
 class Tracker():
     # Remove peers from the peer list who do not request continuous updates from the tracker after this many seconds
-    PEER_INACTIVITY_TIMEOUT = 10
+    PEER_INACTIVITY_TIMEOUT = 12
     # Time between tracker requests used if not specified by tracker
     DEFAULT_TRACKER_INTERVAL = 9
     MAX_PEERS = 50
@@ -141,7 +141,7 @@ class Tracker():
         except bencode.BencodeDecodeError:
             return [503, {"failure reason": "Failed to decode response"}]
 
-        if tracker_response.status_code != 200:
+        if DEBUG_MODE and tracker_response.status_code != 200:
             print(f"Failed to get peer list from tracker: {response_text["failure reason"]}", file=sys.stderr)
 
         return [tracker_response.status_code, response_text]
@@ -169,14 +169,17 @@ class Tracker():
 
 
     def has_peer(self, info_hash: str, address: str, port: int):
-        if not self.torrents.get(info_hash):
+        peers = self.torrents.get(info_hash)
+
+        if not peers:
             return False
-        
-        for peer_tuple in self.torrents[info_hash].values():
+
+        for peer_tuple in peers.values():
             if peer_tuple[0] == address and peer_tuple[1] == port:
                 return True
 
         return False
+
 
     def try_add_peer(self, info_hash: str, peer_id: str, address: str, port: int, seeding: bool):
         if self.has_peer(info_hash, address, port) or self.get_peer_count() == Tracker.MAX_PEERS:
@@ -213,6 +216,7 @@ class Tracker():
     def handle_requests(self):
         if DEBUG_MODE:
             print(f"Listening for peer requests on {self.address}...")
+
         try:
             while self.running:
                 self._server.handle_request()
