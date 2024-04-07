@@ -19,12 +19,13 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
         query_params = urllib.parse.parse_qs(parsed_url.query)
+        print(query_params)
 
         if not query_params:
             self.send_error_response("Payload required")
             return
 
-        peer_address = self.client_address[0]
+        peer_address = query_params.get("peer_address")[0]
         peer_id = query_params.get("peer_id")[0]
         peer_port = query_params.get("port")[0]
         info_hash = query_params.get("info_hash")[0]
@@ -80,7 +81,7 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
 
 class Tracker():
     # Remove peers from the peer list who do not request continuous updates from the tracker after this many seconds
-    PEER_INACTIVITY_TIMEOUT = 12
+    PEER_INACTIVITY_TIMEOUT = 30
     # Time between tracker requests used if not specified by tracker
     DEFAULT_TRACKER_INTERVAL = 9
     MAX_PEERS = 50
@@ -110,6 +111,7 @@ class Tracker():
     @classmethod
     def send_tracker_request(cls, peer_id: str,
                              peer_port: int,
+                             peer_address: str,
                              tracker_url: str,
                              info_hash: str,
                              seeding: bool = False,
@@ -120,6 +122,7 @@ class Tracker():
         request_payload = {
             "info_hash": info_hash,
             "peer_id": peer_id,
+            "peer_address": peer_address,
             "port": peer_port,
             "uploaded": 0,
             "downloaded": 0,

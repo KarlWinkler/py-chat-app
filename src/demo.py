@@ -27,7 +27,7 @@ def test_read_bitfield():
 
 
 def test_tracker_connection(client: Client, info_hash: str, tracker_url: str):
-    status_code, response = Tracker.send_tracker_request(client.client_peer.address, client.client_peer.port, tracker_url, info_hash)
+    status_code, response = Tracker.send_tracker_request(client.client_peer.address, client.client_peer.port, client.client_peer.address, tracker_url, info_hash)
 
     if status_code == 200:
         complete = response["complete"]

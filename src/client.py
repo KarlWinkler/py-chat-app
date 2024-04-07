@@ -37,6 +37,7 @@ class Client():
             tracker_response = Tracker.send_tracker_request(
                 self.client_peer.peer_id,
                 self.client_peer.port,
+                self.client_peer.address,
                 tracker_url,
                 torrent.info_hash,
                 self.seeding
