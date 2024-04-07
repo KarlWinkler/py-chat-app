@@ -1,0 +1,12 @@
+bencode.py==4.0.0
+bitarray==2.9.2
+bitstring==4.1.4
+certifi==2024.2.2
+charset-normalizer==3.3.2
+idna==3.6
+prettytable==3.10.0
+python-dotenv==1.0.1
+requests==2.31.0
+sparse-file==0.0.2
+urllib3==2.2.1
+wcwidth==0.2.13
