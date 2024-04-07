@@ -42,7 +42,7 @@ class Peer():
 
     def recv_message(self):
         raw_header = self.receive_data(message.PEER_WIRE_MESSAGE_LENGTH)
-        if raw_header is None:
+        if not raw_header:
             return None
 
         payload_length, message_id = struct.unpack("!IB", raw_header)
@@ -69,6 +69,9 @@ class Peer():
         print(f"Received block")
 
         raw_data = self.receive_data(4*2 + BLOCK_SIZE) # TODO: Receive the real size of the block (last block will likely be less than BLOCK_SIZE)
+        if not raw_data:
+            return None
+
         block_msg = message.Piece.from_bytes(raw_header + raw_data)
 
         print(block_msg.block_data)
@@ -142,7 +145,7 @@ class Peer():
             try:
                 chunk = self.socket.recv(bytes_remaining)
             except socket.timeout as e:
-                print(f"Socket timeout, closing connection: {e}")
+                #print(f"Socket timeout, closing connection: {e}")
                 self.disconnect()
                 return None
             

@@ -133,7 +133,7 @@ class Torrent():
             if piece.valid():
                 self.bitfield.set(value=1, pos=piece.index)
         
-        print(self.bitfield)
+        print("Bitfield: ", self.bitfield)
 
 
     # Client downloads a new piece

@@ -50,8 +50,6 @@ def run_tracker(address: str, port: int):
 def run_downloader(address, port):
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
     torrent.load_pieces(SAVE_PATH)
-    for piece in torrent.pieces:
-        print(piece.index)
     #torrent.write_piece(SAVE_PATH, torrent.pieces[2], "bee_move2.txt")
 
     client = Client(address, port, SAVE_PATH)
