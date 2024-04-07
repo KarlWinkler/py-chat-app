@@ -132,12 +132,11 @@ class Client():
 
         try:
             while self.running:
-                #Request pieces and download from connected peers
+                # TODO: SEND REQUEST MESSAGES FOR PIECES
+                #Download from connected peers
                 for peer in self.connected_peers.values():
                     peer: Peer
                     peer.recv_message()
-
-                time.sleep(Tracker.DEFAULT_TRACKER_INTERVAL)
 
         except (SystemExit, KeyboardInterrupt):
             self.stop()
@@ -192,11 +191,14 @@ class Client():
                             continue
 
                         # Test: Send a block to the connected peer
-                        peer.send_block(torrent.pieces[1], 0)
+                        for piece in torrent.pieces:
+                            for i in range(len(piece.blocks)):
+                                peer.send_block(piece, i)
                     else:
                         sock: socket.socket
 
-                        #Parse wire message from peer
+                        # TODO: SEND PARSE MESSAGES FROM PEERS
+                        # RESPOND TO REQUESTS WITH PIECE MESSAGE
                 
                 for sock in exceptional:
                     if peer := self.get_peer_by_socket(sock):
