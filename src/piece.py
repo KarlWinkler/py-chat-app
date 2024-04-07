@@ -1,3 +1,4 @@
+from block import Block, BlockState
 import hashlib
 import math
 
@@ -10,24 +11,30 @@ class Piece:
         self.verified = False
         self.downloaded = False
         self.length = None
-        self._contents = None
+        self.raw_contents = None
+        self.blocks = list[Block]
 
 
     # read raw hash data in chunks of 20 bytes
     # read raw data in chunks of piece_length, set try updating piece.contents with try_set_contents
     @staticmethod
     def create_pieces(piece_hashes: bytes, raw_data: bytes, piece_length: int) -> list['Piece']:
-        hashes_length = len(piece_hashes)
+        piece_count = len(piece_hashes) / PIECE_HASH_LENGTH
         pieces = []
-        offset = 0
+        hash_offset = 0
+        data_offset = 0
         index = 0
 
-        while offset < hashes_length:
-            piece_hash = piece_hashes[offset:offset + PIECE_HASH_LENGTH]
+        while index < piece_count:
+            piece_hash = piece_hashes[hash_offset:hash_offset + PIECE_HASH_LENGTH]
+            raw_piece_contents = raw_data[data_offset:data_offset + piece_length]
+
             piece = Piece(index, piece_hash)
-            #piece.try_set_contents()
-            pieces.append(piece)
-            offset += PIECE_HASH_LENGTH
+            if piece.try_set_contents(raw_piece_contents):
+                pieces.append(piece)
+
+            hash_offset += PIECE_HASH_LENGTH
+            data_offset += piece_length
             index += 1
 
         return pieces
@@ -39,21 +46,22 @@ class Piece:
 
 
     def try_set_contents(self, raw_data: bytes):
-        if self._contents:
+        if self.raw_contents:
             return False
 
         if self.valid(raw_data):
             self.contents = raw_data
             self.length = len(raw_data)
+
+            #block_count = self.length / block.BLOCK
+            #block = Block(BlockState.FULL, data=b'')
+            #self.blocks[]
+
             return True
 
         return False
 
 
     def valid(self, raw_data: bytes):
-        return hashlib.sha1(raw_data) == self.expected_hash
-
-
-    def is_full(self):
-        return self._contents
+        return hashlib.sha1(raw_data).digest() == self.expected_hash
 

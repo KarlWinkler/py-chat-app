@@ -23,7 +23,6 @@ class Peer():
         self.connected = False
         self.completed_handshake = False
 
-
     # parse message type
     #def send_message
     #def receive_message
