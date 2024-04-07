@@ -131,7 +131,7 @@ class Tracker():
 
         # Send GET request to tracker
         try:
-            tracker_response = requests.get(tracker_url, request_payload, timeout=5)
+            tracker_response = requests.get(tracker_url, request_payload, timeout=Tracker.PEER_INACTIVITY_TIMEOUT)
         except requests.exceptions.ConnectionError:
             return [503, {"failure reason": "Tracker unavailable: No response"}]
 
@@ -142,7 +142,7 @@ class Tracker():
             return [503, {"failure reason": "Failed to decode response"}]
 
         if DEBUG_MODE and tracker_response.status_code != 200:
-            print(f"Failed to get peer list from tracker: {response_text["failure reason"]}", file=sys.stderr)
+            print(f"Failed to get peer list from tracker: {response_text['failure reason']}", file=sys.stderr)
 
         return [tracker_response.status_code, response_text]
 

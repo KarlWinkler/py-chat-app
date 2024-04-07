@@ -67,7 +67,7 @@ class Torrent():
                 torrent.file_info[i]["path"] = path[0]
 
         torrent.name = info["name"]
-        torrent.piece_length = info["piece length"]
+        torrent.piece_length = info['piece length']
         torrent.piece_hashes = info["pieces"]
         torrent.piece_count = math.ceil(torrent.total_length / torrent.piece_length)
         torrent.bitfield = BitArray([0]*torrent.piece_count)
@@ -108,7 +108,7 @@ class Torrent():
         Path(save_path).mkdir(parents=True, exist_ok=True)
 
         for f_info in self.file_info:
-            file_path = os.path.join(save_path, f_info["path"])
+            file_path = os.path.join(f_info["path"])
 
             fill_holes = False
             file_mode = "rb+"
