@@ -46,6 +46,7 @@ class Peer():
             return None
 
         payload_length, message_id = struct.unpack("!IB", raw_header)
+        print("paytload l", payload_length)
 
         if message_id == message.CHOKE_ID:
             pass
@@ -67,6 +68,11 @@ class Peer():
 
     def recv_block(self, raw_header):
         print(f"Received block")
+
+        raw_data = self.receive_data(4*2 + BLOCK_SIZE)
+        block = message.Piece.from_bytes(raw_header + raw_data)
+
+        print(block.block_data)
 
 
     """Send handshake before receive (for downloading peers)"""
