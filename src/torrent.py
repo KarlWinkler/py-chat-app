@@ -1,7 +1,6 @@
 from bitstring import BitArray
 from piece import Piece
 from pathlib import Path
-import sparse_file
 import bencode
 import util
 import hashlib
@@ -108,8 +107,7 @@ class Torrent():
         Path(save_path).mkdir(parents=True, exist_ok=True)
 
         for f_info in self.file_info:
-            file_path = os.path.join(f_info["path"])
-
+            file_path = os.path.join(save_path, f_info["path"])
             fill_holes = False
             file_mode = "rb+"
 
@@ -117,12 +115,12 @@ class Torrent():
                 file_mode = "wb+"
                 fill_holes = True
 
-            file = open(os.path.join(save_path, file_path), file_mode)
+            file = open(file_path, file_mode)
             self.files.append(file)
 
             if fill_holes:
                 offset = 0
-                print("Filling holes in file")
+                print("Filling holes in file with null bytes")
                 while offset < self.total_length:
                     file.seek(offset)
                     file.write(b'\x00')
@@ -131,44 +129,27 @@ class Torrent():
             raw_data = file.read(self.piece_length * self.piece_count)
             self.pieces = Piece.create_pieces(self.piece_hashes, raw_data, self.piece_length)
 
-            #file2 = open(os.path.join(save_path, self.file_info[1]["path"]), "ab+")
-
-            # bytes_read = 0
-            # piece_index = 0
-
-            # while bytes_read < self.total_length:
-            #     chunk = file.read(self.piece_length)
-            #     if not chunk:
-            #         print("chunk ", chunk)
-            #         break
-
-            #     chunk_hash = hashlib.sha1(chunk).digest()
-
-            #     print("EXPECTED HASH", self.pieces[piece_index].expected_hash)
-            #     print("CHUNK HASH ", chunk_hash)
-            #     print()
-
-            #     bytes_read += len(chunk)
-            #     piece_index += 1
-            
-            break
-
-        # TODO: retrieve length of sparse file (in place of 0)
-        #self.pieces = Piece.create_pieces(self.piece_hashes, 0, self.piece_length)
-
         for piece in self.pieces:
             if piece.valid():
                 self.bitfield.set(value=1, pos=piece.index)
+        
+        print(self.bitfield)
 
-        #print(self)
 
-
-    # when client downloads a new piece, we need to update the list
-    def write_piece(self, piece: Piece):
-        self.bitfield.set(value=1, pos=piece.index)
+    # Client downloads a new piece
+    def write_piece(self, piece: Piece, save_path: str, file_path: str):
         self.pieces[piece.index] = piece
 
-        # update sparse file
+        file_path = os.path.join(file_path)
+        file_mode = "rb+"
+
+        if not os.path.exists(file_path):
+            file_mode = "wb+"
+
+        file = open(os.path.join(save_path, file_path), file_mode)
+        file.seek(piece.index * self.piece_length)
+        file.write(piece.data)
+        file.close()
 
 
     def __str__(self):

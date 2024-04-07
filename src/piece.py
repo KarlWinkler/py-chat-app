@@ -1,4 +1,4 @@
-from block import Block, BlockState
+from block import Block, BlockState, BLOCK_SIZE
 import hashlib
 import math
 
@@ -11,12 +11,9 @@ class Piece:
         self.verified = False
         self.downloaded = False
         self.length = None
-        self.raw_contents = None
-        self.blocks = list[Block]
+        self.data = None
 
 
-    # read raw hash data in chunks of 20 bytes
-    # read raw data in chunks of piece_length, set try updating piece.contents with try_set_contents
     @staticmethod
     def create_pieces(piece_hashes: bytes, raw_data: bytes, piece_length: int) -> list['Piece']:
         piece_count = len(piece_hashes) / PIECE_HASH_LENGTH
@@ -45,23 +42,46 @@ class Piece:
         return math.ceil(len(piece_hashes) / PIECE_HASH_LENGTH)
 
 
-    def try_set_contents(self, raw_data: bytes):
-        if self.raw_contents:
+    def add_block(self, block: Block, block_index: int):
+        if not self.blocks:
+            return False
+        
+        self.blocks[block_index] = block
+
+        if None not in self.blocks:
+            data = b''
+            for i in range(self.block_count):
+                block: Block = self.blocks[i]
+                data += block.data
+
+
+    def try_set_contents(self, data: bytes):
+        if self.data:
             return False
 
-        if self.valid(raw_data):
-            self.contents = raw_data
-            self.length = len(raw_data)
+        if self.valid(data):
+            self.data = data
+            self.length = len(data)
+            self.block_count = math.ceil(self.length / BLOCK_SIZE)
+            self.blocks = [None] * self.block_count
 
-            #block_count = self.length / block.BLOCK
-            #block = Block(BlockState.FULL, data=b'')
-            #self.blocks[]
+            block_offset = 0
+            for i in range(self.block_count):
+                block = Block(i, BlockState.FULL, data=self.data[block_offset:block_offset + BLOCK_SIZE])
+                self.blocks[i] = block
+                block_offset += BLOCK_SIZE
+
+            # Adjust the size of the last block to match the size of the actual contents
+            last_block: Block = self.blocks[self.block_count - 1]
+            last_block.block_size = len(last_block.data)
 
             return True
 
         return False
 
 
-    def valid(self, raw_data: bytes):
+    def valid(self, raw_data: bytes = None):
+        if raw_data is None:
+            raw_data = self.data
         return hashlib.sha1(raw_data).digest() == self.expected_hash
 

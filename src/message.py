@@ -280,26 +280,27 @@ class Request(Message):
         return Request(piece_index, block_offset, piece_length)
 
 
+# The message is called Piece (naming conventions) but it actually sends a single block
 class Piece(Message):
     PAYLOAD_LENGTH = None
 
-    def __init__(self, piece_length: int, piece_index: int, block_offset: int, block: bytes):
+    def __init__(self, block_length: int, piece_index: int, block_index: int, block_data: bytes):
         super().__init__(PEER_WIRE_MESSAGE_LENGTH)
         self.payload_length = 1
         self.message_id = PIECE_ID
-        self.piece_length = piece_length
+        self.block_length = block_length
         self.piece_index = piece_index
-        self.block_offset = block_offset
-        self.block = block
-        self.PAYLOAD_LENGTH = 4*3 + len(self.block)
+        self.block_index = block_index
+        self.block_data = block_data
+        self.PAYLOAD_LENGTH = 4*3 + len(self.block_data)
         self.message_length = PEER_WIRE_MESSAGE_LENGTH + self.PAYLOAD_LENGTH
 
 
     def to_bytes(self):
         message = struct.pack("!IB", self.payload_length, self.message_id)
         message += struct.pack("!I", self.piece_index)
-        message += struct.pack("!I", self.block_offset)
-        message += struct.pack("!{}s".format(self.piece_length), self.block)
+        message += struct.pack("!I", self.block_index)
+        message += struct.pack("!{}s".format(self.block_length), self.block_data)
 
         return message
 
@@ -311,10 +312,11 @@ class Piece(Message):
         if message_id != PIECE_ID:
             raise Exception("Malformed Piece message")
         
-        piece_length = len(raw_message) - 13
-        piece_index, block_offset, block = struct.unpack("!II{}s".format(piece_length), raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + 4*2 + piece_length])
+        block_length = len(raw_message) - 4*3 - 1
+        piece_index, block_index = struct.unpack("!II", raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + 4*2])
+        block_data = struct.unpack("!{}s".format(block_length), raw_message[PEER_WIRE_MESSAGE_LENGTH + 4*2:PEER_WIRE_MESSAGE_LENGTH + 4*2 + block_length])[0]
 
-        return Piece(piece_length, piece_index, block_offset, block)
+        return Piece(block_length, piece_index, block_index, block_data)
 
 
 

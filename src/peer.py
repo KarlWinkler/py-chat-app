@@ -3,6 +3,9 @@ import peer_state
 import socket
 import message
 from piece import Piece
+from block import Block, BLOCK_SIZE
+import hashlib
+import struct
 
 # Maximum number of connections allowed by the socket
 MAX_PEER_REQUESTS = 20
@@ -23,24 +26,31 @@ class Peer():
         self.connected = False
         self.completed_handshake = False
 
-    # parse message type
-    #def send_message
-    #def receive_message
 
-    def send_piece(self, piece: Piece):
-        msg = message.Piece(piece.length, piece.index, 0, piece.contents[:2**14 + 1])
+    def send_block(self, piece: Piece, block_index: int):
+        if piece.blocks[block_index] is None:
+            return False
+        
+        block: Block = piece.blocks[block_index]
+        #print("Block:", piece.length, piece.index, block_index)
+        #print(block.data)
+        msg = message.Piece(block.block_size, piece.index, block_index, block.data)
 
         if not self.send_data(msg.to_bytes()):
             return None
+
+        #print("Decoded block:", msg.block_length, msg.piece_index, msg.block_length, msg.block_index)
+        #print("HASH MATCH:", hashlib.sha1(block.data).digest() == hashlib.sha1(msg.block_data).digest())
         
         return True
 
 
-    def recv_piece(self):
-        block_length = 2**14
+    def recv_block(self):
         raw_header = self.receive_data(message.PEER_WIRE_MESSAGE_LENGTH)
 
-        #handshake = message.Piece.from_bytes(raw_block)
+        if raw_header:
+            payload_length, message_id = struct.unpack("!IB", raw_header)
+            print(message_id)
 
 
     """Send handshake before receive (for downloading peers)"""

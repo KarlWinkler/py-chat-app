@@ -17,7 +17,6 @@ DEFAULT_PORT = os.getenv("PORT", 34324)
 # Bee movie torrent has trackers urls ["http://127.0.0.1:35222", "http://127.0.0.1:35333"]
 DEMO_TORRENT_PATH = os.getenv("DEMO_TORRENT_PATH", os.path.join(os.getenv('USERPROFILE', os.path.expanduser("~")), 'Documents', 'bee_movie.torrent'))
 
-
 # Folder where downloaded files are stored
 SAVE_PATH = os.getenv("SAVE_PATH", os.path.join(os.getenv('USERPROFILE', os.path.expanduser("~")), 'Downloads'))
 
@@ -51,6 +50,9 @@ def run_tracker(address: str, port: int):
 def run_downloader(address, port):
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
     torrent.load_pieces(SAVE_PATH)
+    for piece in torrent.pieces:
+        print(piece.index)
+    #torrent.write_piece(SAVE_PATH, torrent.pieces[2], "bee_move2.txt")
 
     client = Client(address, port, SAVE_PATH)
     client.start_downloading(torrent)

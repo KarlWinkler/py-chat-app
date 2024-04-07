@@ -131,6 +131,8 @@ class Client():
             while self.running:
                 #Request pieces and download from connected peers
 
+                self.client_peer.recv_block()
+
                 time.sleep(Tracker.DEFAULT_TRACKER_INTERVAL)
 
         except (SystemExit, KeyboardInterrupt):
@@ -145,10 +147,10 @@ class Client():
 
 
     def start_seeding(self, torrent: Torrent):
+        self.seeding = True
         self.start_tracker_requests(torrent)
 
         self.client_peer.start_listening()
-        self.seeding = True
 
         print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address, self.client_peer.port)
 
@@ -173,6 +175,8 @@ class Client():
                         self.connected_peers[peer.peer_id] = peer
 
                         print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
+
+                        self.client_peer.send_block(torrent.pieces[1], 0)
                     else:
                         sock: socket.socket
 
