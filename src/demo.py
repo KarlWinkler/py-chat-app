@@ -20,6 +20,9 @@ DEMO_TORRENT_PATH = os.getenv("DEMO_TORRENT_PATH", os.path.join(os.getenv('USERP
 # Folder where downloaded files are stored
 SAVE_PATH = os.getenv("SAVE_PATH", os.path.join(os.getenv('USERPROFILE', os.path.expanduser("~")), 'Downloads'))
 
+# File path to the bee movie
+FILE_PATH = os.getenv("FILE_PATH", os.path.join(os.getenv('USERPROFILE', os.path.expanduser("~")), 'Documents', 'bee_movie.txt'))
+
 
 def test_read_bitfield():
     pass
@@ -49,8 +52,8 @@ def run_tracker(address: str, port: int):
 # Make sure at least one tracker is running before 
 def run_downloader(address, port):
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
-    torrent.load_pieces(SAVE_PATH)
-    #torrent.write_piece(SAVE_PATH, torrent.pieces[2], "bee_move2.txt")
+    torrent.load_pieces(FILE_PATH)
+    torrent.write_pieces(SAVE_PATH)
 
     client = Client(address, port, SAVE_PATH)
     client.start_downloading(torrent)
@@ -59,7 +62,7 @@ def run_downloader(address, port):
 
 def run_seeder(address, port):
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
-    torrent.load_pieces(SAVE_PATH)
+    torrent.load_pieces(FILE_PATH)
 
     client = Client(address, port, SAVE_PATH)
     client.start_seeding(torrent)

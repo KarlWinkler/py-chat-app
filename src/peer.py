@@ -6,6 +6,7 @@ from piece import Piece
 from block import Block, BLOCK_SIZE
 import hashlib
 import struct
+from torrent import Torrent
 
 # Maximum number of connections allowed by the socket
 MAX_PEER_REQUESTS = 20
@@ -40,7 +41,7 @@ class Peer():
         return True
 
 
-    def recv_message(self):
+    def recv_message(self, torrent: Torrent):
         raw_header = self.receive_data(message.PEER_WIRE_MESSAGE_LENGTH)
         if not raw_header:
             return None
@@ -62,20 +63,19 @@ class Peer():
         elif message_id == message.REQUEST_ID:
             pass
         elif message_id == message.PIECE_ID:
-            self.recv_block(raw_header)
+            self.recv_block(raw_header, torrent)
 
 
-    def recv_block(self, raw_header):
+    def recv_block(self, raw_header, torrent: Torrent):
         print(f"Received block")
 
         raw_data = self.receive_data(4*2 + BLOCK_SIZE) # TODO: Receive the real size of the block (last block will likely be less than BLOCK_SIZE)
         if not raw_data:
             return None
 
+        piece_index, block_index = struct.unpack("!II", raw_data[:4*2])
         block_msg = message.Piece.from_bytes(raw_header + raw_data)
-
-        print(block_msg.block_data)
-
+        torrent.pieces[piece_index].blocks[block_index].data = block_msg.block_data
 
     """Send handshake before receive (for downloading peers)"""
     def initiate_handshake(self, info_hash: str, client_peer_id: str, expected_peer_id: str):

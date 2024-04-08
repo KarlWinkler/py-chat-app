@@ -137,16 +137,20 @@ class Torrent():
 
 
     # Client downloads a new piece
-    def write_piece(self, piece: Piece, save_path: str, file_path: str):
-        self.pieces[piece.index] = piece
+    def write_pieces(self, save_path: str):
+        for piece in self.pieces:
+            if piece.valid():
+                self.write_piece(piece, save_path)
+                self.bitfield.set(value=1, pos=piece.index)
 
-        file_path = os.path.join(file_path)
+
+    def write_piece(self, piece: Piece, save_path: str):
+        file_path = os.path.join(save_path, self.file_info[0]["path"])
         file_mode = "rb+"
-
         if not os.path.exists(file_path):
             file_mode = "wb+"
+        file = open(file_path, file_mode)
 
-        file = open(os.path.join(save_path, file_path), file_mode)
         file.seek(piece.index * self.piece_length)
         file.write(piece.data)
         file.close()

@@ -136,7 +136,7 @@ class Client():
                 #Download from connected peers
                 for peer in self.connected_peers.values():
                     peer: Peer
-                    peer.recv_message()
+                    peer.recv_message(torrent)
 
         except (SystemExit, KeyboardInterrupt):
             self.stop()

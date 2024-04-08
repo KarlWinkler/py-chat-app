@@ -280,7 +280,6 @@ class Request(Message):
         return Request(piece_index, block_offset, piece_length)
 
 
-# The message is called Piece (naming conventions) but it actually sends a single block
 class Piece(Message):
     PAYLOAD_LENGTH = None
 
