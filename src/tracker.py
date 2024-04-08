@@ -19,12 +19,13 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
         query_params = urllib.parse.parse_qs(parsed_url.query)
+        print(query_params)
 
         if not query_params:
             self.send_error_response("Payload required")
             return
 
-        peer_address = self.client_address[0]
+        peer_address = query_params.get("peer_address")[0]
         peer_id = query_params.get("peer_id")[0]
         peer_port = query_params.get("port")[0]
         info_hash = query_params.get("info_hash")[0]
@@ -80,9 +81,10 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
 
 class Tracker():
     # Remove peers from the peer list who do not request continuous updates from the tracker after this many seconds
-    PEER_INACTIVITY_TIMEOUT = 10
+    PEER_INACTIVITY_TIMEOUT = 30
     # Time between tracker requests used if not specified by tracker
     DEFAULT_TRACKER_INTERVAL = 9
+    MAX_PEERS = 50
 
 
     def __init__(self, address: str, port: int, interval: int = 9):
@@ -92,6 +94,7 @@ class Tracker():
         self.torrents = {str: {}}
         self.tracker_id = 0 # TODO: Unique tracker ids are not needed currently
         self.thread = None
+        self.count = 0
 
         self._server = HTTPServer(
             # Empty string automatically defaults to loopback address
@@ -108,6 +111,7 @@ class Tracker():
     @classmethod
     def send_tracker_request(cls, peer_id: str,
                              peer_port: int,
+                             peer_address: str,
                              tracker_url: str,
                              info_hash: str,
                              seeding: bool = False,
@@ -118,6 +122,7 @@ class Tracker():
         request_payload = {
             "info_hash": info_hash,
             "peer_id": peer_id,
+            "peer_address": peer_address,
             "port": peer_port,
             "uploaded": 0,
             "downloaded": 0,
@@ -129,7 +134,7 @@ class Tracker():
 
         # Send GET request to tracker
         try:
-            tracker_response = requests.get(tracker_url, request_payload, timeout=5)
+            tracker_response = requests.get(tracker_url, request_payload, timeout=Tracker.PEER_INACTIVITY_TIMEOUT)
         except requests.exceptions.ConnectionError:
             return [503, {"failure reason": "Tracker unavailable: No response"}]
 
@@ -139,8 +144,8 @@ class Tracker():
         except bencode.BencodeDecodeError:
             return [503, {"failure reason": "Failed to decode response"}]
 
-        if tracker_response.status_code != 200:
-            print(f"Failed to get peer list from tracker: {response_text["failure reason"]}", file=sys.stderr)
+        if DEBUG_MODE and tracker_response.status_code != 200:
+            print(f"Failed to get peer list from tracker: {response_text['failure reason']}", file=sys.stderr)
 
         return [tracker_response.status_code, response_text]
 
@@ -162,11 +167,17 @@ class Tracker():
         return peers
 
 
+    def get_peer_count(self):
+        return sum(len(self.torrents[info_hash]) for info_hash in self.torrents)
+
+
     def has_peer(self, info_hash: str, address: str, port: int):
-        if not self.torrents.get(info_hash):
+        peers = self.torrents.get(info_hash)
+
+        if not peers:
             return False
-        
-        for peer_tuple in self.torrents[info_hash].values():
+
+        for peer_tuple in peers.values():
             if peer_tuple[0] == address and peer_tuple[1] == port:
                 return True
 
@@ -174,7 +185,7 @@ class Tracker():
 
 
     def try_add_peer(self, info_hash: str, peer_id: str, address: str, port: int, seeding: bool):
-        if self.has_peer(info_hash, address, port):
+        if self.has_peer(info_hash, address, port) or self.get_peer_count() == Tracker.MAX_PEERS:
             return False
 
         peer_tuple = (address, port, seeding, time.time())
@@ -208,6 +219,7 @@ class Tracker():
     def handle_requests(self):
         if DEBUG_MODE:
             print(f"Listening for peer requests on {self.address}...")
+
         try:
             while self.running:
                 self._server.handle_request()
@@ -239,12 +251,12 @@ class Tracker():
 
     def __str__(self):
         table = PrettyTable()
-        table.field_names = ["Peer ID", "IP", "Port", "Seeding"]
+        table.field_names = ["Peer ID", "IP Address", "Port", "Seeding"]
 
         for info_hash in self.torrents:
             for peer_id, peer in self.torrents[info_hash].items():
                 table.add_row([peer_id, peer[0], peer[1], peer[2]])
-        
+
         return table.get_string()
 
 

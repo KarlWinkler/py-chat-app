@@ -1,7 +1,6 @@
 from bitstring import BitArray
 from piece import Piece
 from pathlib import Path
-import sparse_file
 import bencode
 import util
 import hashlib
@@ -26,7 +25,7 @@ class Torrent():
         self.total_length = 0
         self.bitfield: BitArray = None
         self.pieces: list[Piece] = []
-        self.sparse_files = []
+        self.files = []
 
     
     @staticmethod
@@ -67,14 +66,13 @@ class Torrent():
                 torrent.file_info[i]["path"] = path[0]
 
         torrent.name = info["name"]
-        torrent.piece_length = info["piece length"]
+        torrent.piece_length = info['piece length']
         torrent.piece_hashes = info["pieces"]
         torrent.piece_count = math.ceil(torrent.total_length / torrent.piece_length)
         torrent.bitfield = BitArray([0]*torrent.piece_count)
         torrent.info_hash = hashlib.sha1(urllib.parse.urlencode(info).encode()).digest()
 
-        hash_count = Piece.get_hash_count(torrent.piece_hashes)
-        if torrent.piece_count != hash_count:
+        if torrent.piece_count != Piece.get_hash_count(torrent.piece_hashes):
             raise Exception("Total length of file does not match number of piece hashes")
 
         # Optional info included in some torrents
@@ -103,35 +101,59 @@ class Torrent():
         return tracker_list
 
 
-    def load_pieces(self):
-        pass
-
-
-    def load_sparse_files(self, save_path: str):
+    # load pieces from disk which have already been downloaded
+    def load_pieces(self, save_path: str):
         # Create parent directories if they don't exist
         Path(save_path).mkdir(parents=True, exist_ok=True)
 
         for f_info in self.file_info:
             file_path = os.path.join(save_path, f_info["path"])
-            self.sparse_files.append(sparse_file.open_sparse(file_path, "wb+"))
+            fill_holes = False
+            file_mode = "rb+"
 
-        # TODO: retrieve length of sparse file (in place of 0)
-        self.pieces = Piece.create_pieces(self.piece_hashes, 0, self.piece_length)
+            if not os.path.exists(file_path):
+                file_mode = "wb+"
+                fill_holes = True
 
-        # with open(file_path, "w+") as file:
-        #     pass
-        #     #self.sparse_file = sparse_file.open_sparse(file_path, "wb+")
+            file = open(file_path, file_mode)
+            self.files.append(file)
+
+            if fill_holes:
+                offset = 0
+                print("Filling holes in file with null bytes")
+                while offset < self.total_length:
+                    file.seek(offset)
+                    file.write(b'\x00')
+                    offset += self.piece_length
+
+            raw_data = file.read(self.piece_length * self.piece_count)
+            self.pieces = Piece.create_pieces(self.piece_hashes, raw_data, self.piece_length)
+
+        for piece in self.pieces:
+            if piece.valid():
+                self.bitfield.set(value=1, pos=piece.index)
+        
+        print("Bitfield: ", self.bitfield)
 
 
-    def save_sparse_file(self):
-        pass
+    # Client downloads a new piece
+    def write_pieces(self, save_path: str):
+        for piece in self.pieces:
+            if piece.valid():
+                self.write_piece(piece, save_path)
+                self.bitfield.set(value=1, pos=piece.index)
 
 
-    def write_piece(self, piece: Piece):
-        self.bitfield.set(value=1, pos=piece.index)
-        self.pieces[piece.index] = piece
+    def write_piece(self, piece: Piece, save_path: str):
+        file_path = os.path.join(save_path, self.file_info[0]["path"])
+        file_mode = "rb+"
+        if not os.path.exists(file_path):
+            file_mode = "wb+"
+        file = open(file_path, file_mode)
 
-        # update sparse file
+        file.seek(piece.index * self.piece_length)
+        file.write(piece.data)
+        file.close()
 
 
     def __str__(self):

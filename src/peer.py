@@ -2,6 +2,11 @@ import sys
 import peer_state
 import socket
 import message
+from piece import Piece
+from block import Block, BLOCK_SIZE
+import hashlib
+import struct
+from torrent import Torrent
 
 # Maximum number of connections allowed by the socket
 MAX_PEER_REQUESTS = 20
@@ -23,10 +28,54 @@ class Peer():
         self.completed_handshake = False
 
 
-    # parse message type
-    #def send_message
-    #def receive_message
+    def send_block(self, piece: Piece, block_index: int):
+        if piece.blocks[block_index] is None:
+            return False
+        
+        block: Block = piece.blocks[block_index]
+        msg = message.Piece(block.block_size, piece.index, block_index, block.data)
 
+        if not self.send_data(msg.to_bytes()):
+            return None
+
+        return True
+
+
+    def recv_message(self, torrent: Torrent):
+        raw_header = self.receive_data(message.PEER_WIRE_MESSAGE_LENGTH)
+        if not raw_header:
+            return None
+
+        payload_length, message_id = struct.unpack("!IB", raw_header)
+
+        if message_id == message.CHOKE_ID:
+            pass
+        elif message_id == message.UNCHOKE_ID:
+            pass
+        elif message_id == message.INTERESTED_ID:
+            pass
+        elif message_id == message.NOT_INTERESTED_ID:
+            pass
+        elif message_id == message.HAVE_ID:
+            pass
+        elif message_id == message.BITFIELD_ID:
+            pass
+        elif message_id == message.REQUEST_ID:
+            pass
+        elif message_id == message.PIECE_ID:
+            self.recv_block(raw_header, torrent)
+
+
+    def recv_block(self, raw_header, torrent: Torrent):
+        print(f"Received block")
+
+        raw_data = self.receive_data(4*2 + BLOCK_SIZE) # TODO: Receive the real size of the block (last block will likely be less than BLOCK_SIZE)
+        if not raw_data:
+            return None
+
+        piece_index, block_index = struct.unpack("!II", raw_data[:4*2])
+        block_msg = message.Piece.from_bytes(raw_header + raw_data)
+        torrent.pieces[piece_index].blocks[block_index].data = block_msg.block_data
 
     """Send handshake before receive (for downloading peers)"""
     def initiate_handshake(self, info_hash: str, client_peer_id: str, expected_peer_id: str):
@@ -96,7 +145,7 @@ class Peer():
             try:
                 chunk = self.socket.recv(bytes_remaining)
             except socket.timeout as e:
-                print(f"Socket timeout, closing connection: {e}")
+                #print(f"Socket timeout, closing connection: {e}")
                 self.disconnect()
                 return None
             
