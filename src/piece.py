@@ -29,7 +29,7 @@ class Piece:
             raw_piece_contents = raw_data[data_offset:data_offset + piece_length]
 
             piece = Piece(index, piece_hash)
-            piece.try_set_contents(raw_piece_contents)
+            piece.try_init_contents(raw_piece_contents)
             pieces.append(piece)
 
             hash_offset += PIECE_HASH_LENGTH
@@ -49,7 +49,7 @@ class Piece:
             self.blocks.insert(block.index, block)
 
 
-    def update_data(self):
+    def try_update_contents(self):
         if not self.blocks or not self.block_count:
             return False
 
@@ -60,11 +60,13 @@ class Piece:
                 data += block.data
             self.data = data
 
+            print(self.data)
+
             return True
         return False
 
 
-    def try_set_contents(self, data: bytes):
+    def try_init_contents(self, data: bytes):
         if self.data:
             return False
 
