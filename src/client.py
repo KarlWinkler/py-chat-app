@@ -64,7 +64,7 @@ class Client():
         if tracker_urls := torrent.tracker_list.get("http"):
             #for url in tracker_urls:
                 #print(url)
-            tracker_urls = ["http://127.0.0.1:35222"]
+            tracker_urls = ["http://70.65.105.173:35222"]
             return self.try_tracker_urls(torrent, tracker_urls)
 
         return None
