@@ -105,6 +105,8 @@ class Peer():
     def send_handshake(self, info_hash: str, client_peer_id: str):
         handshake = message.Handshake(info_hash, client_peer_id)
 
+        print("SENDING HANDSHAKE")
+
         if not self.send_data(handshake.to_bytes()):
             return None
 
@@ -118,8 +120,10 @@ class Peer():
 
         handshake = message.Handshake.from_bytes(raw_handshake)
 
-        if not handshake.validate(info_hash, client_peer_id, expected_peer_id):
-            return False
+        print("RECEIVED HANDSHAKE")
+
+        # if not handshake.validate(info_hash, client_peer_id, expected_peer_id):
+        #     return False
 
         return handshake
 

@@ -91,7 +91,7 @@ class Client():
         print("CONNECTED:", connected)
 
         if connected and peer.initiate_handshake(info_hash, self.client_peer.peer_id, peer.peer_id):
-            print("sending handshake")
+            print("SENT handshake")
             return peer
         
         return None
