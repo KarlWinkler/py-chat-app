@@ -12,6 +12,7 @@ class Piece:
         self.downloaded = False
         self.length = None
         self.data = None
+        self.blocks = [None] * self.block_count
 
 
     @staticmethod
@@ -27,8 +28,8 @@ class Piece:
             raw_piece_contents = raw_data[data_offset:data_offset + piece_length]
 
             piece = Piece(index, piece_hash)
-            if piece.try_set_contents(raw_piece_contents):
-                pieces.append(piece)
+            piece.try_set_contents(raw_piece_contents)
+            pieces.append(piece)
 
             hash_offset += PIECE_HASH_LENGTH
             data_offset += piece_length
@@ -43,16 +44,19 @@ class Piece:
 
 
     def add_block(self, block: Block, block_index: int):
-        if not self.blocks:
-            return False
-        
         self.blocks[block_index] = block
 
+
+    def update_data(self):
         if None not in self.blocks:
             data = b''
             for i in range(self.block_count):
                 block: Block = self.blocks[i]
                 data += block.data
+            self.data = data
+
+            return True
+        return False
 
 
     def try_set_contents(self, data: bytes):
@@ -63,7 +67,6 @@ class Piece:
             self.data = data
             self.length = len(data)
             self.block_count = math.ceil(self.length / BLOCK_SIZE)
-            self.blocks = [None] * self.block_count
 
             block_offset = 0
             for i in range(self.block_count):
