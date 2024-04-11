@@ -36,7 +36,7 @@ class Message():
 class Handshake(Message):
     def __init__(self, info_hash: str, peer_id: str):
         super().__init__(HANDSHAKE_MESSAGE_LENGTH)
-        self.info_hash = bytes(info_hash)
+        self.info_hash = info_hash.encode('utf-8')
         self.peer_id = peer_id
 
     
@@ -61,6 +61,7 @@ class Handshake(Message):
         pstr_length = struct.unpack("!B", raw_message[:1])[0]
         pstr, _, info_hash, peer_id = struct.unpack("!{}s8s20s20s".format(pstr_length), raw_message[1:message_length])
         peer_id: bytes = peer_id.decode("utf-8")
+        info_hash: bytes = info_hash.decode("utf-8")
 
         if pstr != HANDSHAKE_PSTR:
             raise Exception(f"Bad pstr: {[pstr]}")
