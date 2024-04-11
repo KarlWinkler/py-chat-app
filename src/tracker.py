@@ -9,6 +9,8 @@ import sys
 
 DEBUG_MODE = True
 
+HASHES = [-1,-1]
+
 class TrackerRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, tracker: 'Tracker', *args, **kwargs):
         self.tracker = tracker
@@ -19,7 +21,6 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
         query_params = urllib.parse.parse_qs(parsed_url.query)
-        print(query_params)
 
         if not query_params:
             self.send_error_response("Payload required")
@@ -31,6 +32,14 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
         info_hash = query_params.get("info_hash")[0]
         event = query_params.get("event")[0]
         seeding = query_params.get("seeding")[0].lower() == "true"
+
+        if HASHES[0] == -1:
+            HASHES[0] = info_hash
+        elif HASHES[1] == -1 and info_hash != HASHES[0]:
+            HASHES[1] = info_hash
+            if HASHES[0] != HASHES[1]:
+                print("NOT EQUAL AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", HASHES[0])
+                print(HASHES[1])
 
         try:
             peer_port = int(peer_port)
@@ -155,15 +164,14 @@ class Tracker():
 
         for peer_id, peer in self.torrents[info_hash].items():
             # Exclude the peer who requested the peer list from the response
-            #if peer_id != requesting_peer_id:
-            print("peerid:", peer_id)
-            peer_data = {
-                "peer id": peer_id,
-                "ip": peer[0],
-                "port": peer[1],
-                "seeding": peer[2]
-            }
-            peers.append(peer_data)
+            if peer_id != requesting_peer_id:
+                peer_data = {
+                    "peer id": peer_id,
+                    "ip": peer[0],
+                    "port": peer[1],
+                    "seeding": peer[2]
+                }
+                peers.append(peer_data)
         
         return peers
 
