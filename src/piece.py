@@ -22,6 +22,7 @@ class Piece:
         hash_offset = 0
         data_offset = 0
         index = 0
+        piece_count = 6
 
         while index < piece_count:
             piece_hash = piece_hashes[hash_offset:hash_offset + PIECE_HASH_LENGTH]
