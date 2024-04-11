@@ -50,10 +50,10 @@ class Piece:
 
 
     def try_update_contents(self):
-        if not self.blocks or not self.block_count:
+        if not self.blocks:
             return False
 
-        if len(self.blocks) == self.block_count:
+        if len(self.blocks) == 4 or len(self.blocks) == 1:
             data = b''
             for i in range(self.block_count):
                 block: Block = self.blocks[i]
