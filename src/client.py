@@ -70,7 +70,7 @@ class Client():
         if tracker_urls := torrent.tracker_list.get("http"):
             #for url in tracker_urls:
                 #print(url)
-            tracker_urls = ["http://70.65.105.173:35222"]
+            tracker_urls = ["https://2439-2604-3d09-1c7a-4db0-6908-dcd3-d3f2-67c6.ngrok-free.app"]
             return self.try_tracker_urls(torrent, tracker_urls)
 
         return None
