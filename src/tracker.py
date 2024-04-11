@@ -155,14 +155,15 @@ class Tracker():
 
         for peer_id, peer in self.torrents[info_hash].items():
             # Exclude the peer who requested the peer list from the response
-            if peer_id != requesting_peer_id:
-                peer_data = {
-                    "peer id": peer_id,
-                    "ip": peer[0],
-                    "port": peer[1],
-                    "seeding": peer[2]
-                }
-                peers.append(peer_data)
+            #if peer_id != requesting_peer_id:
+            print("peerid:", peer_id)
+            peer_data = {
+                "peer id": peer_id,
+                "ip": peer[0],
+                "port": peer[1],
+                "seeding": peer[2]
+            }
+            peers.append(peer_data)
         
         return peers
 
