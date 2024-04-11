@@ -77,7 +77,7 @@ def main():
         if endpoint_type == "0":
             run_downloader(address, port)
         elif endpoint_type == "1":
-            run_seeder(address, port, "13.56.217.111", 18743)
+            run_seeder(address, port, "3.134.39.220", 18743)
     elif endpoint_type == "2":
         try:
             address = input(f"Enter IP address (default={DEFAULT_TRACKER_ADDRESS}): ") or DEFAULT_TRACKER_ADDRESS

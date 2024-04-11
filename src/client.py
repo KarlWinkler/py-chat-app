@@ -120,7 +120,7 @@ class Client():
                     response_dict: dict = tracker_response[1]
 
                     if not self.seeding and status_code == 200:
-                        print("received tracker list")
+                        #print("received tracker list")
                         self.connect_to_peers(torrent.info_hash, response_dict)
 
                     time.sleep(response_dict.get("interval", Tracker.DEFAULT_TRACKER_INTERVAL))

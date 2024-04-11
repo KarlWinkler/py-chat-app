@@ -105,6 +105,8 @@ class Peer():
     def send_handshake(self, info_hash: str, client_peer_id: str):
         handshake = message.Handshake(info_hash, client_peer_id)
 
+        print("sending handshake to:", self.address, self.port)
+
         if not self.send_data(handshake.to_bytes()):
             return None
 
