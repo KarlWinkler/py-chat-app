@@ -36,7 +36,7 @@ class Message():
 class Handshake(Message):
     def __init__(self, info_hash: str, peer_id: str):
         super().__init__(HANDSHAKE_MESSAGE_LENGTH)
-        self.info_hash = info_hash
+        self.info_hash = bytes(info_hash)
         self.peer_id = peer_id
 
     
