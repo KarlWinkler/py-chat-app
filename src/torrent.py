@@ -70,7 +70,8 @@ class Torrent():
         torrent.piece_hashes = info["pieces"]
         torrent.piece_count = math.ceil(torrent.total_length / torrent.piece_length)
         torrent.bitfield = BitArray([0]*torrent.piece_count)
-        torrent.info_hash = hashlib.sha1(urllib.parse.urlencode(info).encode()).digest()
+        torrent.info_hash = "test"
+        #hashlib.sha1(urllib.parse.urlencode(info).encode()).digest()
 
         if torrent.piece_count != Piece.get_hash_count(torrent.piece_hashes):
             raise Exception("Total length of file does not match number of piece hashes")

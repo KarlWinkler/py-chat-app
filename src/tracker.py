@@ -40,6 +40,8 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
             if HASHES[0] != HASHES[1]:
                 print("NOT EQUAL AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", HASHES[0])
                 print(HASHES[1])
+            else:
+                print("HASHES EQUALLLLLLLLLLLLLLLLLLLLLLLL")
 
         try:
             peer_port = int(peer_port)
