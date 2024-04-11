@@ -48,6 +48,8 @@ class Peer():
 
         payload_length, message_id = struct.unpack("!IB", raw_header)
 
+        print("MESSAGE: ", message_id)
+
         if message_id == message.CHOKE_ID:
             pass
         elif message_id == message.UNCHOKE_ID:

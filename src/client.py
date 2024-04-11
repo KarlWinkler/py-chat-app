@@ -155,7 +155,6 @@ class Client():
                 for peer in self.connected_peers.values():
                     peer: Peer
                     peer.recv_message(torrent)
-                    print("RECEIVING BLOCK")
 
         except (SystemExit, KeyboardInterrupt):
             self.stop()
