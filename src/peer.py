@@ -175,6 +175,7 @@ class Peer():
 
     def request_connection(self):
         #try:
+        print("REQUESTING")
         if self.socket.connect((self.address, self.port)):
             print("CONNECTED")
             self.connected = True
