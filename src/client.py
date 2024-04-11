@@ -155,6 +155,7 @@ class Client():
                 for peer in self.connected_peers.values():
                     peer: Peer
                     peer.recv_message(torrent)
+                    print("RECEIVING BLOCK")
 
         except (SystemExit, KeyboardInterrupt):
             self.stop()
@@ -211,6 +212,7 @@ class Client():
                         # Test: Send a block to the connected peer
                         for piece in torrent.pieces:
                             for i in range(len(piece.blocks)):
+                                print("SENDING BLOCK")
                                 peer.send_block(piece, i)
                     else:
                         sock: socket.socket
