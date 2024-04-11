@@ -6,10 +6,14 @@ import random
 import time
 import select
 import socket
+import threading
 
 CLIENT_ID = "FA"
 CLIENT_VERSION = "0000"
 DEBUG_MODE = True
+
+connected_peers_lock = threading.Lock()
+
 
 class Client():
     def __init__(self, address: str, port: int, save_path: str, public_address: str = None, public_port: int = None):
@@ -105,7 +109,9 @@ class Client():
             if self.connected_peers.get(peer_info["peer id"]) or not peer_info["seeding"]:
                 continue
             if peer := self.try_connect_to_peer(info_hash, peer_info):
+                connected_peers_lock.acquire()
                 self.connected_peers[peer.peer_id] = peer
+                connected_peers_lock.release()
 
                 if DEBUG_MODE:
                     print(f"Connected to: {peer.peer_id, peer.address, peer.port}")
@@ -152,18 +158,22 @@ class Client():
             while self.running:
                 # TODO: SEND REQUEST MESSAGES FOR PIECES
                 #Download from connected peers
+                connected_peers_lock.acquire()
                 for peer in self.connected_peers.values():
                     peer: Peer
                     peer.recv_message(torrent)
+                connected_peers_lock.release()
 
         except (SystemExit, KeyboardInterrupt):
             self.stop()
 
 
     def get_peer_by_socket(self, socket: socket.socket):
+        connected_peers_lock.acquire()
         for peer in self.connected_peers.values():
             if peer.socket == socket:
                 return peer
+        connected_peers_lock.release()
         return None
 
 
@@ -180,7 +190,9 @@ class Client():
             return None
 
         peer.peer_id = received_handshake.peer_id
+        connected_peers_lock.acquire()
         self.connected_peers[peer.peer_id] = peer
+        connected_peers_lock.release()
 
         if DEBUG_MODE:
             print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
