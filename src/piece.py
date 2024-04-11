@@ -12,7 +12,7 @@ class Piece:
         self.downloaded = False
         self.length = None
         self.data = None
-        self.blocks = [None] * self.block_count
+        self.blocks = []
 
 
     @staticmethod
@@ -43,12 +43,16 @@ class Piece:
         return math.ceil(len(piece_hashes) / PIECE_HASH_LENGTH)
 
 
-    def add_block(self, block: Block, block_index: int):
-        self.blocks[block_index] = block
+    def add_block(self, block: Block):
+        if 0 <= block.index <= len(self.blocks) - 1:
+            self.blocks.insert(block.index, block)
 
 
     def update_data(self):
-        if None not in self.blocks:
+        if not self.blocks or not self.block_count:
+            return False
+
+        if len(self.blocks) == self.block_count:
             data = b''
             for i in range(self.block_count):
                 block: Block = self.blocks[i]
@@ -71,7 +75,7 @@ class Piece:
             block_offset = 0
             for i in range(self.block_count):
                 block = Block(i, BlockState.FULL, data=self.data[block_offset:block_offset + BLOCK_SIZE])
-                self.blocks[i] = block
+                self.blocks.append(block)
                 block_offset += BLOCK_SIZE
 
             # Adjust the size of the last block to match the size of the actual contents

@@ -80,7 +80,9 @@ class Peer():
         print("PIECE INFO:", len(torrent.pieces))
         print("BLOCK INFO:", len(torrent.pieces[0].blocks))
 
-        torrent.pieces[piece_index].blocks[block_index].data = block_msg.block_data
+        block = Block(block_index, data=block_msg.block_data)
+        piece: Piece = torrent.pieces[piece_index]
+        piece.add_block(block)
 
     """Send handshake before receive (for downloading peers)"""
     def initiate_handshake(self, info_hash: str, client_peer_id: str, expected_peer_id: str):
