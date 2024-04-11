@@ -83,7 +83,6 @@ class Client():
             peer_info["peer id"],
             peer_info["seeding"]
         )
-        print("trying connection with: ", peer_info["ip"])
         connected = peer.request_connection()
 
         if connected and peer.initiate_handshake(info_hash, self.client_peer.peer_id, peer.peer_id):
@@ -94,6 +93,7 @@ class Client():
 
     def connect_to_peers(self, info_hash: str, tracker_response: dict):
         for peer_info in tracker_response["peers"]:
+            print("trying connection with: ", peer_info["ip"])
             # Only attempt to connect with seeding peers
             if self.connected_peers.get(peer_info["peer id"]) or not peer_info["seeding"]:
                 continue
@@ -116,6 +116,7 @@ class Client():
                     response_dict: dict = tracker_response[1]
 
                     if not self.seeding and status_code == 200:
+                        print("received tracker list")
                         self.connect_to_peers(torrent.info_hash, response_dict)
 
                     time.sleep(response_dict.get("interval", Tracker.DEFAULT_TRACKER_INTERVAL))
