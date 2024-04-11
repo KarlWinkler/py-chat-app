@@ -60,11 +60,11 @@ def run_downloader(address, port):
     #self.test_tracker_connection(client, torrent.info_hash, f"http://127.0.0.1:35222")
 
 
-def run_seeder(listen_address, port, public_address):
+def run_seeder(listen_address, port, public_address, public_port):
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
     torrent.load_pieces(FILE_PATH)
 
-    client = Client(listen_address, port, SAVE_PATH, public_address)
+    client = Client(listen_address, port, SAVE_PATH, public_address, public_port)
     client.start_seeding(torrent)
 
 
@@ -77,7 +77,7 @@ def main():
         if endpoint_type == "0":
             run_downloader(address, port)
         elif endpoint_type == "1":
-            run_seeder(address, port, "https://ca4f-2604-3d09-1c7a-4db0-6908-dcd3-d3f2-67c6.ngrok-free.app")
+            run_seeder(address, port, "13.56.217.111", 18743)
     elif endpoint_type == "2":
         try:
             address = input(f"Enter IP address (default={DEFAULT_TRACKER_ADDRESS}): ") or DEFAULT_TRACKER_ADDRESS

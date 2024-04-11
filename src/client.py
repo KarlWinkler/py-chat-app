@@ -12,12 +12,13 @@ CLIENT_VERSION = "0000"
 DEBUG_MODE = True
 
 class Client():
-    def __init__(self, address: str, port: int, save_path: str, public_address: str = None):
+    def __init__(self, address: str, port: int, save_path: str, public_address: str = None, public_port: int = None):
         self.client_peer = Peer(address, port, Client.generate_peer_id(), False)
         self.save_path = save_path
         self.connected_peers: dict[str, Peer] = {}
         self.current_tracker_url = None
         self.public_address = public_address
+        self.public_port = public_port
         self.thread = None
         self.running = False
         self.seeding = False
@@ -37,13 +38,15 @@ class Client():
 
         for tracker_url in tracker_urls:
             addr = self.client_peer.address
+            p = self.client_peer.port
             if self.seeding:
                 addr = self.public_address
+                p = self.public_port
                 tracker_url = "http://127.0.0.1:35222"
 
             tracker_response = Tracker.send_tracker_request(
                 self.client_peer.peer_id,
-                self.client_peer.port,
+                p,
                 addr,
                 tracker_url,
                 torrent.info_hash,

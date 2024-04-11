@@ -174,14 +174,14 @@ class Peer():
 
 
     def request_connection(self):
-        try:
-            self.socket.connect((self.address, self.port))
+        #try:
+        if self.socket.connect((self.address, self.port)):
             self.connected = True
-        except Exception as e:
-            self.connected = False
-            print(f"Failed to connect to {self.address}:{self.port}: {e}", file=sys.stderr)
-        finally:
-            return self.connected
+        #except Exception as e:
+            #self.connected = False
+            #print(f"Failed to connect to {self.address}:{self.port}: {e}", file=sys.stderr)
+        #finally:
+        return self.connected
 
 
     def accept_connection(self):
