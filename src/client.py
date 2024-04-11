@@ -160,6 +160,7 @@ class Client():
                 #Download from connected peers
                 connected_peers_lock.acquire()
                 for peer in self.connected_peers.values():
+                    print("CHECKING FOR MESSAGES")
                     peer: Peer
                     peer.recv_message(torrent)
                 connected_peers_lock.release()

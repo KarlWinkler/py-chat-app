@@ -42,6 +42,8 @@ class Peer():
 
 
     def recv_message(self, torrent: Torrent):
+        print("ATTEMPT TO RECEV MESSG DATA")
+
         raw_header = self.receive_data(message.PEER_WIRE_MESSAGE_LENGTH)
         if not raw_header:
             return None
