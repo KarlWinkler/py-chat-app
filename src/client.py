@@ -62,6 +62,9 @@ class Client():
 
         # Not in swarm or lost connection with current tracker
         if tracker_urls := torrent.tracker_list.get("http"):
+            #for url in tracker_urls:
+                #print(url)
+            tracker_urls = ["http://127.0.0.1:35222"]
             return self.try_tracker_urls(torrent, tracker_urls)
 
         return None

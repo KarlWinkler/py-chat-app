@@ -186,18 +186,18 @@ class Peer():
 
     def accept_connection(self):
         peer = None
-        try:
-            peer_socket, _ = self.socket.accept()
-            if not peer_socket:
-                return None
-
-            peer_address, peer_port = peer_socket.getpeername()
-            peer = Peer(peer_address, peer_port, sock=peer_socket)
-            peer.connected = True
-
-        except Exception as e:
-            print(f"Failed to accept connection request: {e}", file=sys.stderr)
+        #try:
+        peer_socket, _ = self.socket.accept()
+        if not peer_socket:
             return None
+
+        peer_address, peer_port = peer_socket.getpeername()
+        peer = Peer(peer_address, peer_port, sock=peer_socket)
+        peer.connected = True
+
+        #except Exception as e:
+            #print(f"Failed to accept connection request: {e}", file=sys.stderr)
+            #return None
 
         return peer
 
