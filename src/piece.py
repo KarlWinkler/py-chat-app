@@ -68,24 +68,24 @@ class Piece:
         if self.data:
             return False
 
-        if self.valid(data):
-            self.data = data
-            self.length = len(data)
-            self.block_count = math.ceil(self.length / BLOCK_SIZE)
+        #if self.valid(data):
+        self.data = data
+        self.length = len(data)
+        self.block_count = math.ceil(self.length / BLOCK_SIZE)
 
-            block_offset = 0
-            for i in range(self.block_count):
-                block = Block(i, BlockState.FULL, data=self.data[block_offset:block_offset + BLOCK_SIZE])
-                self.blocks.append(block)
-                block_offset += BLOCK_SIZE
+        block_offset = 0
+        for i in range(self.block_count):
+            block = Block(i, BlockState.FULL, data=self.data[block_offset:block_offset + BLOCK_SIZE])
+            self.blocks.append(block)
+            block_offset += BLOCK_SIZE
 
-            # Adjust the size of the last block to match the size of the actual contents
-            last_block: Block = self.blocks[self.block_count - 1]
-            last_block.block_size = len(last_block.data)
+        # Adjust the size of the last block to match the size of the actual contents
+        last_block: Block = self.blocks[self.block_count - 1]
+        last_block.block_size = len(last_block.data)
 
-            return True
+        return True
 
-        return False
+        #return False
 
 
     def valid(self, raw_data: bytes = None):
