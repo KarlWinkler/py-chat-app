@@ -42,8 +42,6 @@ class Peer():
 
 
     def recv_message(self, torrent: Torrent):
-        #print("ATTEMPT TO RECEV MESSG DATA")
-
         raw_header = self.receive_data(message.PEER_WIRE_MESSAGE_LENGTH)
         if not raw_header:
             return None
@@ -79,6 +77,7 @@ class Peer():
         block_msg = message.Piece.from_bytes(raw_header + raw_data)
 
         print(f"Received block", piece_index, block_index)
+        print("BLOCK INFO:", len(torrent.pieces), len(torrent.pieces[0].blocks))
 
         torrent.pieces[piece_index].blocks[block_index].data = block_msg.block_data
 
@@ -179,7 +178,6 @@ class Peer():
 
     def request_connection(self):
         #try:
-        print("REQUESTING")
         self.socket.connect((self.address, self.port))
         self.connected = True
         #except Exception as e:

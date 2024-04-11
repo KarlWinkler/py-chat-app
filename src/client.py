@@ -221,16 +221,12 @@ class Client():
                         if peer is None:
                             continue
 
-                        # Test: Send a block to the connected peer
+                        # Send blocks to the connected peer
                         for piece in torrent.pieces:
                             for i in range(len(piece.blocks)):
-                                print("SENDING BLOCK")
                                 peer.send_block(piece, i)
                     else:
                         sock: socket.socket
-
-                        # TODO: SEND PARSE MESSAGES FROM PEERS
-                        # RESPOND TO REQUESTS WITH PIECE MESSAGE
                 
                 for sock in exceptional:
                     if peer := self.get_peer_by_socket(sock):
