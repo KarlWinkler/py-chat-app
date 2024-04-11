@@ -97,7 +97,7 @@ class Client():
     def connect_to_peers(self, info_hash: str, tracker_response: dict):
         #print("trying connection with: ", len(tracker_response["peers"]))
         for peer_info in tracker_response["peers"]:
-            print("trying connection with: ", peer_info["peer id"])
+            print("trying connection with: ", peer_info["peer id"], peer_info["ip"], peer_info["port"])
             # Only attempt to connect with seeding peers
             if self.connected_peers.get(peer_info["peer id"]) or not peer_info["seeding"]:
                 continue
