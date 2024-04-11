@@ -21,7 +21,7 @@ DEMO_TORRENT_PATH = os.getenv("DEMO_TORRENT_PATH", os.path.join(os.getenv('USERP
 SAVE_PATH = os.getenv("SAVE_PATH", os.path.join(os.getenv('USERPROFILE', os.path.expanduser("~")), 'Downloads'))
 
 # File path to the bee movie
-FILE_PATH = os.getenv("FILE_PATH", os.path.join(os.getenv('USERPROFILE', os.path.expanduser("~")), 'Documents', 'bee_movie.txt'))
+FILE_PATH = os.getenv("FILE_PATH", os.path.join(os.getenv('USERPROFILE', os.path.expanduser("~")), 'Documents'))
 
 
 def test_read_bitfield():

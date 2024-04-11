@@ -42,7 +42,7 @@ class Peer():
 
 
     def recv_message(self, torrent: Torrent):
-        print("ATTEMPT TO RECEV MESSG DATA")
+        #print("ATTEMPT TO RECEV MESSG DATA")
 
         raw_header = self.receive_data(message.PEER_WIRE_MESSAGE_LENGTH)
         if not raw_header:
@@ -71,14 +71,15 @@ class Peer():
 
 
     def recv_block(self, raw_header, torrent: Torrent):
-        print(f"Received block")
-
         raw_data = self.receive_data(4*2 + BLOCK_SIZE) # TODO: Receive the real size of the block (last block will likely be less than BLOCK_SIZE)
         if not raw_data:
             return None
 
         piece_index, block_index = struct.unpack("!II", raw_data[:4*2])
         block_msg = message.Piece.from_bytes(raw_header + raw_data)
+
+        print(f"Received block", piece_index, block_index)
+
         torrent.pieces[piece_index].blocks[block_index].data = block_msg.block_data
 
     """Send handshake before receive (for downloading peers)"""
@@ -148,8 +149,7 @@ class Peer():
         while (bytes_received < total_bytes):
             try:
                 chunk = self.socket.recv(bytes_remaining)
-            except socket.timeout as e:
-                #print(f"Socket timeout, closing connection: {e}")
+            except socket.timeout:
                 self.disconnect()
                 return None
             
