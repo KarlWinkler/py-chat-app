@@ -163,6 +163,11 @@ class Client():
                     peer.recv_message(torrent)
                 connected_peers_lock.release()
 
+                if self.client_peer.is_file_downloaded(torrent):
+                    for piece in torrent.pieces:
+                        print(piece.data)
+                    print("OK START WRITING TO FILE")
+
         except (SystemExit, KeyboardInterrupt):
             self.stop()
 

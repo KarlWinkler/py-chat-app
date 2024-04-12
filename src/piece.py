@@ -63,11 +63,9 @@ class Piece:
             data += block.data
         self.data = data
 
-        #print("expected hash of index:", self.index, self.expected_hash)
-
         if hashlib.sha1(self.data).digest() == self.expected_hash:
-            print("piece is DONE:", self.index)
-            print(hashlib.sha1(self.data).digest() == self.expected_hash)
+            print("piece is downloaded:", self.index)
+            self.downloaded = True
 
         #print(self.data.decode('utf-8'))
 

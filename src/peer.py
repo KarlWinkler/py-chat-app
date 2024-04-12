@@ -67,7 +67,7 @@ class Peer():
 
 
     def recv_block(self, raw_header, torrent: Torrent):
-        raw_data = self.receive_data(4*3) # TODO: Receive the real size of the block (last block will likely be less than BLOCK_SIZE)
+        raw_data = self.receive_data(4*3)
         if not raw_data:
             return None
 
@@ -85,7 +85,13 @@ class Peer():
         piece: Piece = torrent.pieces[piece_index]
         piece.add_block(block)
         piece.try_update_contents()
-        #print(block.data.decode('utf-8'))
+
+
+    def is_file_downloaded(self, torrent: Torrent):
+        for piece in torrent.pieces:
+            if not piece.downloaded:
+                return False
+        return True
 
 
     """Send handshake before receive (for downloading peers)"""
@@ -184,19 +190,14 @@ class Peer():
 
 
     def request_connection(self):
-        #try:
         self.socket.connect((self.address, self.port))
         self.connected = True
-        #except Exception as e:
-            #self.connected = False
-            #print(f"Failed to connect to {self.address}:{self.port}: {e}", file=sys.stderr)
-        #finally:
+
         return self.connected
 
 
     def accept_connection(self):
         peer = None
-        #try:
         peer_socket, _ = self.socket.accept()
         if not peer_socket:
             return None
@@ -204,10 +205,6 @@ class Peer():
         peer_address, peer_port = peer_socket.getpeername()
         peer = Peer(peer_address, peer_port, sock=peer_socket)
         peer.connected = True
-
-        #except Exception as e:
-            #print(f"Failed to accept connection request: {e}", file=sys.stderr)
-            #return None
 
         return peer
 
