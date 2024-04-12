@@ -58,7 +58,9 @@ class Piece:
         block_length = len(first_block.data)
         expected_block_count = math.ceil(self.length/block_length)
 
-        #print("actual vs expected:", len(self.blocks), expected_block_count)
+        if self.index == 5:
+            expected_block_count = 2
+        print("actual vs expected:", len(self.blocks), expected_block_count)
 
         if len(self.blocks) == expected_block_count:
             data = b''

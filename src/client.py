@@ -146,7 +146,7 @@ class Client():
     def start_downloading(self, torrent: Torrent):
         self.start_tracker_requests(torrent)
 
-        # EMPTY OUT ALL PIECES BEFORE DOWNLOADING
+        # EMPTY OUT ALL PIECES BEFORE DOWNLOADING (THROW OUT EXISTING DATA)
         for piece in torrent.pieces:
             piece.blocks = []
 
