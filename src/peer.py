@@ -80,7 +80,7 @@ class Peer():
         piece: Piece = torrent.pieces[piece_index]
         #piece.add_block(block)
 
-        print(block.data.decode('utf-8'))
+        #print(block.data.decode('utf-8'))
 
     """Send handshake before receive (for downloading peers)"""
     def initiate_handshake(self, info_hash: str, client_peer_id: str, expected_peer_id: str):

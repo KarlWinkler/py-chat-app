@@ -87,8 +87,6 @@ class Piece:
 
         return True
 
-        #return False
-
 
     def valid(self, raw_data: bytes = None):
         if raw_data is None:
