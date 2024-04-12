@@ -7,13 +7,14 @@ import time
 import select
 import socket
 import threading
+import os
 
 CLIENT_ID = "FA"
 CLIENT_VERSION = "0000"
 DEBUG_MODE = True
 
 SEED_TRACKER_URL = "http://127.0.0.1:35222"
-TRACKER_URL_NGROK = "https://2439-2604-3d09-1c7a-4db0-6908-dcd3-d3f2-67c6.ngrok-free.app"
+TRACKER_URL_NGROK = os.getenv("TRACKER_URL_NGROK", "")
 
 
 connected_peers_lock = threading.Lock()
@@ -42,6 +43,7 @@ class Client():
     def try_tracker_urls(self, torrent: Torrent, tracker_urls: list):
         latest_response = None
 
+        print("Trying tracker urls: ", tracker_urls)
         for tracker_url in tracker_urls:
             addr = self.client_peer.address
             p = self.client_peer.port
