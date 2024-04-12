@@ -70,18 +70,15 @@ class Handshake(Message):
         
 
     def validate(self, info_hash: str, client_peer_id: str, expected_peer_id: str = None):
-        decoded_info_hash = self.info_hash.decode('utf-8')
+        # Convert expected hash to string
+        expected_info_hash = self.info_hash.replace(b'\x00', b'').decode('utf-8').strip()
 
-        #print(decoded_info_hash, info_hash)
-        return True
-
-        #return decoded_info_hash == info_hash
-        # if self.info_hash != info_hash:
-        #     return False
-        # if expected_peer_id and self.peer_id == expected_peer_id:
-        #     return True
+        if expected_info_hash != info_hash:
+            return False
+        if expected_peer_id and self.peer_id == expected_peer_id:
+            return True
         
-        # return self.peer_id != client_peer_id
+        return self.peer_id != client_peer_id
 
 
 class KeepAlive(Message):
