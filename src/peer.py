@@ -79,7 +79,7 @@ class Peer():
         
         block_msg = message.Piece.from_bytes(raw_header + raw_data + block_data)
 
-        print(f"Received block: {block_index} of piece: {piece_index}")
+        #print(f"Received block: {block_index} of piece: {piece_index}")
 
         block = Block(block_index, data=block_msg.block_data)
         piece: Piece = torrent.pieces[piece_index]

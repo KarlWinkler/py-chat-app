@@ -13,6 +13,9 @@ DEFAULT_TRACKER_PORT = os.getenv("DEFAULT_TRACKER_PORT", 35222)
 DEFAULT_ADDRESS = os.getenv("ADDRESS", "127.0.0.1")
 DEFAULT_PORT = os.getenv("PORT", 34324)
 
+NGROK_SEED_IP = "3.134.39.220"
+NGROK_SEED_PORT = 18743
+
 # Torrent that will be used in the demo
 # Bee movie torrent has trackers urls ["http://127.0.0.1:35222", "http://127.0.0.1:35333"]
 DEMO_TORRENT_PATH = os.getenv("DEMO_TORRENT_PATH", os.path.join(os.getenv('USERPROFILE', os.path.expanduser("~")), 'Documents', 'bee_movie.torrent'))
@@ -49,7 +52,6 @@ def run_tracker(address: str, port: int):
     tracker.start()
 
 
-# Make sure at least one tracker is running before 
 def run_downloader(address, port):
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
     torrent.load_pieces(FILE_PATH)
@@ -57,7 +59,6 @@ def run_downloader(address, port):
 
     client = Client(address, port, SAVE_PATH)
     client.start_downloading(torrent)
-    #self.test_tracker_connection(client, torrent.info_hash, f"http://127.0.0.1:35222")
 
 
 def run_seeder(listen_address, port, public_address, public_port):
@@ -77,7 +78,7 @@ def main():
         if endpoint_type == "0":
             run_downloader(address, port)
         elif endpoint_type == "1":
-            run_seeder(address, port, "3.134.39.220", 18743)
+            run_seeder(address, port, NGROK_SEED_IP, NGROK_SEED_PORT)
     elif endpoint_type == "2":
         try:
             address = input(f"Enter IP address (default={DEFAULT_TRACKER_ADDRESS}): ") or DEFAULT_TRACKER_ADDRESS

@@ -44,9 +44,10 @@ class Piece:
         return math.ceil(len(piece_hashes) / PIECE_HASH_LENGTH)
 
 
-    def add_block(self, block: Block):
+    def add_block(self, block: Block, block_index: int):
         #if 0 <= block.index <= len(self.blocks) - 1:
-        self.blocks.append(block)
+        self.blocks.insert(block_index, block)
+        print(f"piece {self.index} is now {len(self.blocks)} long")
 
 
     def try_update_contents(self):
@@ -55,9 +56,9 @@ class Piece:
         
         first_block: Block = self.blocks[0]
         block_length = len(first_block.data)
-        expected_block_count = math.ceil(len(self.data)/block_length)
+        expected_block_count = math.ceil(self.length/block_length)
 
-        print("actual vs expected:", len(self.blocks), expected_block_count)
+        #print("actual vs expected:", len(self.blocks), expected_block_count)
 
         if len(self.blocks) == expected_block_count:
             data = b''
@@ -66,7 +67,7 @@ class Piece:
                 data += block.data
             self.data = data
 
-            print(self.data.decode('utf-8'))
+            #print(self.data.decode('utf-8'))
 
             return True
         return False
