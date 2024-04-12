@@ -55,17 +55,16 @@ def run_tracker(address: str, port: int):
 def run_downloader(address, port):
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
     torrent.load_pieces(FILE_PATH)
-    torrent.write_pieces(SAVE_PATH)
 
-    client = Client(address, port, SAVE_PATH)
-    client.start_downloading(torrent)
+    client = Client(address, port)
+    client.start_downloading(torrent, SAVE_PATH)
 
 
 def run_seeder(listen_address, port, public_address, public_port):
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
     torrent.load_pieces(FILE_PATH)
 
-    client = Client(listen_address, port, SAVE_PATH, public_address, public_port)
+    client = Client(listen_address, port, public_address, public_port)
     client.start_seeding(torrent)
 
 

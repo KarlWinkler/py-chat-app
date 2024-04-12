@@ -19,9 +19,8 @@ TRACKER_URL_NGROK = "https://2439-2604-3d09-1c7a-4db0-6908-dcd3-d3f2-67c6.ngrok-
 connected_peers_lock = threading.Lock()
 
 class Client():
-    def __init__(self, address: str, port: int, save_path: str, public_address: str = None, public_port: int = None):
+    def __init__(self, address: str, port: int, public_address: str = None, public_port: int = None):
         self.client_peer = Peer(address, port, Client.generate_peer_id(), False)
-        self.save_path = save_path
         self.connected_peers: dict[str, Peer] = {}
         self.current_tracker_url = None
         self.public_address = public_address
@@ -143,7 +142,7 @@ class Client():
         self.thread.start()
 
 
-    def start_downloading(self, torrent: Torrent):
+    def start_downloading(self, torrent: Torrent, save_path: str):
         self.start_tracker_requests(torrent)
 
         # EMPTY OUT ALL PIECES BEFORE DOWNLOADING (THROW OUT EXISTING DATA)
@@ -165,8 +164,11 @@ class Client():
                 connected_peers_lock.release()
 
                 if not printed_file and torrent.is_file_downloaded():
+                    torrent.write_pieces(save_path)
+
                     for piece in torrent.pieces:
                         print(piece.data)
+
                     printed_file = True
 
         except (SystemExit, KeyboardInterrupt):

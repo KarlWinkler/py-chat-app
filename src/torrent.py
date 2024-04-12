@@ -159,6 +159,8 @@ class Torrent():
 
 
     def write_piece(self, piece: Piece, save_path: str):
+        Path(save_path).mkdir(parents=True, exist_ok=True)
+
         file_path = os.path.join(save_path, self.file_info[0]["path"])
         file_mode = "rb+"
         if not os.path.exists(file_path):
