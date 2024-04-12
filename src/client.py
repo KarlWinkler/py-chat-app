@@ -221,10 +221,10 @@ class Client():
                             continue
 
                         # Send blocks to the connected peer
-                        #for piece in torrent.pieces:
-                            #for i in range(len(piece.blocks)):
-                                #print(f"Sending block: {i} of piece: {piece.index}")
-                        peer.send_block(torrent.pieces[torrent.piece_count-1], 1)
+                        for piece in torrent.pieces:
+                            for i in range(len(piece.blocks)):
+                                print(f"Sending block: {i} of piece: {piece.index}")
+                                peer.send_block(piece, i)
                     else:
                         sock: socket.socket
                 
