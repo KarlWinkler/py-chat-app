@@ -70,13 +70,13 @@ class Handshake(Message):
         
 
     def validate(self, info_hash: str, client_peer_id: str, expected_peer_id: str = None):
-        if self.info_hash != info_hash:
-            return False
-
-        if expected_peer_id and self.peer_id == expected_peer_id:
-            return True
+        return self.info_hash == info_hash
+        # if self.info_hash != info_hash:
+        #     return False
+        # if expected_peer_id and self.peer_id == expected_peer_id:
+        #     return True
         
-        return self.peer_id != client_peer_id
+        # return self.peer_id != client_peer_id
 
 
 class KeepAlive(Message):
