@@ -223,7 +223,6 @@ class Client():
 
                         # Send blocks to the connected peer
                         for piece in torrent.pieces:
-                            print(piece.data)
                             for i in range(len(piece.blocks)):
                                 peer.send_block(piece, i)
                     else:
