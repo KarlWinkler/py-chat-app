@@ -78,7 +78,7 @@ class Torrent():
         
         i = 0
         while i < torrent.piece_count:
-            print(torrent.piece_hashes[i*20:i*20+20])
+            #print(torrent.piece_hashes[i*20:i*20+20])
             i +=1
 
         # Optional info included in some torrents
