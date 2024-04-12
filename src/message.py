@@ -69,7 +69,9 @@ class Handshake(Message):
         return Handshake(info_hash, peer_id)
         
 
-    def validate(self, info_hash: str, client_peer_id: str, expected_peer_id: str = None):
+    def validate(self, info_hash: bytes, client_peer_id: str, expected_peer_id: str = None):
+        info_hash = info_hash.decode('utf-8').strip('\x00')
+
         return self.info_hash == info_hash
         # if self.info_hash != info_hash:
         #     return False
