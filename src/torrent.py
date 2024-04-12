@@ -90,6 +90,13 @@ class Torrent():
         return torrent
 
 
+    def is_file_downloaded(self):
+        for piece in self.pieces:
+            if not piece.downloaded:
+                return False
+        return True
+
+
     """Build list of HTTP and UDP tracker urls"""
     @staticmethod
     def create_tracker_list(tracker_urls: list[str]) -> tuple[str, str, int]:

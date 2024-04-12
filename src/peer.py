@@ -87,13 +87,6 @@ class Peer():
         piece.try_update_contents()
 
 
-    def is_file_downloaded(self, torrent: Torrent):
-        for piece in torrent.pieces:
-            if not piece.downloaded:
-                return False
-        return True
-
-
     """Send handshake before receive (for downloading peers)"""
     def initiate_handshake(self, info_hash: str, client_peer_id: str, expected_peer_id: str):
         if not self.send_handshake(info_hash, client_peer_id):
