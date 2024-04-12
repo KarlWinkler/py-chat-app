@@ -148,7 +148,8 @@ class Client():
 
         # EMPTY OUT ALL PIECES BEFORE DOWNLOADING
         for piece in torrent.pieces:
-            piece.blocks = []
+            for block in piece.blocks:
+                print(block.data)
 
         if DEBUG_MODE:
             print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address)
