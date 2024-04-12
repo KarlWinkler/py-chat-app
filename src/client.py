@@ -12,6 +12,9 @@ CLIENT_ID = "FA"
 CLIENT_VERSION = "0000"
 DEBUG_MODE = True
 
+SEED_TRACKER_URL = "http://127.0.0.1:35222"
+TRACKER_URL_NGROK = "https://2439-2604-3d09-1c7a-4db0-6908-dcd3-d3f2-67c6.ngrok-free.app"
+
 connected_peers_lock = threading.Lock()
 
 
@@ -46,7 +49,7 @@ class Client():
             if self.seeding:
                 addr = self.public_address
                 p = self.public_port
-                tracker_url = "http://127.0.0.1:35222"
+                tracker_url = SEED_TRACKER_URL
 
             tracker_response = Tracker.send_tracker_request(
                 self.client_peer.peer_id,
@@ -74,10 +77,7 @@ class Client():
                 return tracker_response
 
         # Not in swarm or lost connection with current tracker
-        if tracker_urls := torrent.tracker_list.get("http"):
-            #for url in tracker_urls:
-                #print(url)
-            tracker_urls = ["https://2439-2604-3d09-1c7a-4db0-6908-dcd3-d3f2-67c6.ngrok-free.app"]
+        if tracker_urls := torrent.tracker_list.get("http").append(TRACKER_URL_NGROK):
             return self.try_tracker_urls(torrent, tracker_urls)
 
         return None

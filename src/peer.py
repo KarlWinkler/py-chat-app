@@ -123,8 +123,8 @@ class Peer():
 
         handshake = message.Handshake.from_bytes(raw_handshake)
 
-        # if not handshake.validate(info_hash, client_peer_id, expected_peer_id):
-        #     return False
+        if not handshake.validate(info_hash, client_peer_id, expected_peer_id):
+            return False
 
         return handshake
 
