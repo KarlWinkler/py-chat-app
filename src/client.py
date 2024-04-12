@@ -2,12 +2,15 @@ from threading import Thread
 from peer import Peer
 from torrent import Torrent
 from tracker import Tracker
+from dotenv import load_dotenv
 import random
 import time
 import select
 import socket
 import threading
 import os
+
+load_dotenv()
 
 CLIENT_ID = "FA"
 CLIENT_VERSION = "0000"
