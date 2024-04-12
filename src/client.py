@@ -16,6 +16,8 @@ SEED_TRACKER_URL = "http://127.0.0.1:35222"
 TRACKER_URL_NGROK = "https://2439-2604-3d09-1c7a-4db0-6908-dcd3-d3f2-67c6.ngrok-free.app"
 
 
+connected_peers_lock = threading.Lock()
+
 class Client():
     def __init__(self, address: str, port: int, save_path: str, public_address: str = None, public_port: int = None):
         self.client_peer = Peer(address, port, Client.generate_peer_id(), False)
@@ -27,7 +29,6 @@ class Client():
         self.thread = None
         self.running = False
         self.seeding = False
-        self.connected_peers_lock = threading.Lock()
 
 
     """
@@ -104,9 +105,9 @@ class Client():
             if self.connected_peers.get(peer_info["peer id"]) or not peer_info["seeding"]:
                 continue
             if peer := self.try_connect_to_peer(info_hash, peer_info):
-                self.connected_peers_lock.acquire()
+                connected_peers_lock.acquire()
                 self.connected_peers[peer.peer_id] = peer
-                self.connected_peers_lock.release()
+                connected_peers_lock.release()
 
                 if DEBUG_MODE:
                     print(f"Connected to: {peer.peer_id, peer.address, peer.port}")
@@ -156,22 +157,22 @@ class Client():
         try:
             while self.running:
                 #Download from connected peers
-                self.connected_peers_lock.acquire()
+                #connected_peers_lock.acquire()
                 for peer in self.connected_peers.values():
                     peer: Peer
                     peer.recv_message(torrent)
-                self.connected_peers_lock.release()
+                #connected_peers_lock.release()
 
         except (SystemExit, KeyboardInterrupt):
             self.stop()
 
 
     def get_peer_by_socket(self, socket: socket.socket):
-        self.connected_peers_lock.acquire()
+        connected_peers_lock.acquire()
         for peer in self.connected_peers.values():
             if peer.socket == socket:
                 return peer
-        self.connected_peers_lock.release()
+        connected_peers_lock.release()
         return None
 
 
@@ -188,9 +189,9 @@ class Client():
             return None
 
         peer.peer_id = received_handshake.peer_id
-        self.connected_peers_lock.acquire()
+        connected_peers_lock.acquire()
         self.connected_peers[peer.peer_id] = peer
-        self.connected_peers_lock.release()
+        connected_peers_lock.release()
 
         if DEBUG_MODE:
             print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
