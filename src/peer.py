@@ -73,7 +73,7 @@ class Peer():
 
         piece_index, block_index, block_length = struct.unpack("!III", raw_data)
 
-        block_data = self.receive_data(BLOCK_SIZE)
+        block_data = self.receive_data(block_length)
         if not block_data:
             return None
         
