@@ -125,7 +125,6 @@ class Client():
                     response_dict: dict = tracker_response[1]
 
                     if not self.seeding and status_code == 200:
-                        print("received tracker list")
                         self.connect_to_peers(torrent.info_hash, response_dict)
 
                     time.sleep(response_dict.get("interval", Tracker.DEFAULT_TRACKER_INTERVAL))
@@ -154,6 +153,8 @@ class Client():
         if DEBUG_MODE:
             print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address)
 
+        printed_file = False
+
         try:
             while self.running:
                 #Download from connected peers
@@ -163,10 +164,10 @@ class Client():
                     peer.recv_message(torrent)
                 connected_peers_lock.release()
 
-                if torrent.is_file_downloaded():
+                if not printed_file and torrent.is_file_downloaded():
                     for piece in torrent.pieces:
                         print(piece.data)
-                    print("OK START WRITING TO FILE")
+                    printed_file = True
 
         except (SystemExit, KeyboardInterrupt):
             self.stop()

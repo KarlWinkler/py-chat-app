@@ -51,8 +51,8 @@ class Piece:
 
 
     def try_update_contents(self):
-        # Piece is empty
-        if len(self.blocks) == 0:
+        # Piece is empty or already downloaded
+        if len(self.blocks) == 0 or self.downloaded:
             return False
         
         # Take the hash of the piece and compare with expected hash
@@ -64,7 +64,6 @@ class Piece:
         self.data = data
 
         if hashlib.sha1(self.data).digest() == self.expected_hash:
-            print("piece is downloaded:", self.index)
             self.downloaded = True
 
         #print(self.data.decode('utf-8'))
@@ -94,5 +93,6 @@ class Piece:
     def valid(self, raw_data: bytes = None):
         if raw_data is None:
             raw_data = self.data
+
         return hashlib.sha1(raw_data).digest() == self.expected_hash
 
