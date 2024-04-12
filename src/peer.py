@@ -85,6 +85,8 @@ class Peer():
         piece: Piece = torrent.pieces[piece_index]
         piece.add_block(block)
         piece.try_update_contents()
+        if block_index == 3 or piece_index == 5 and block_index == 1:
+            print(hashlib.sha1(piece.data).digest())
         #print(block.data.decode('utf-8'))
 
 
