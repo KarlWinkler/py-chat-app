@@ -54,7 +54,7 @@ def run_tracker(address: str, port: int):
 
 def run_downloader(address, port):
     torrent = Torrent.load_metainfo_from_file(DEMO_TORRENT_PATH)
-    torrent.load_pieces(FILE_PATH)
+    #torrent.load_pieces(FILE_PATH)
     torrent.write_pieces(SAVE_PATH)
 
     client = Client(address, port, SAVE_PATH)
