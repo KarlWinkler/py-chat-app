@@ -83,7 +83,7 @@ class Tracker():
     # Remove peers from the peer list who do not request continuous updates from the tracker after this many seconds
     PEER_INACTIVITY_TIMEOUT = 30
     # Time between tracker requests used if not specified by tracker
-    DEFAULT_TRACKER_INTERVAL = 9
+    DEFAULT_TRACKER_INTERVAL = 5
     MAX_PEERS = 50
 
 

@@ -207,9 +207,6 @@ class Client():
         if DEBUG_MODE:
             print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address, self.client_peer.port)
         
-        # for piece in torrent.pieces:
-        #     for i in range(len(piece.blocks)):
-        #         print(piece.blocks[i].data)
         for piece in torrent.pieces:
             piece.try_update_contents()
 
