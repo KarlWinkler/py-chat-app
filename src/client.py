@@ -146,6 +146,10 @@ class Client():
     def start_downloading(self, torrent: Torrent):
         self.start_tracker_requests(torrent)
 
+        # EMPTY OUT ALL PIECES BEFORE DOWNLOADING
+        for piece in torrent.pieces:
+            piece.blocks = []
+
         if DEBUG_MODE:
             print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address)
 
