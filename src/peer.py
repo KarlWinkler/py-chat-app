@@ -82,9 +82,10 @@ class Peer():
         #print(f"Received block: {block_index} of piece: {piece_index}")
 
         block = Block(block_index, data=block_msg.block_data)
-        piece: Piece = torrent.pieces[piece_index]
-        piece.add_block(block)
-        piece.try_update_contents()
+        print("adding to piece", piece_index)
+        # piece: Piece = torrent.pieces[piece_index]
+        # piece.add_block(block)
+        # piece.try_update_contents()
         #print(block.data.decode('utf-8'))
 
 
