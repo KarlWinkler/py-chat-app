@@ -65,9 +65,9 @@ class Piece:
 
         #print("expected hash of index:", self.index, self.expected_hash)
 
-        #if hashlib.sha1(self.data).digest() == self.expected_hash:
-            #print("piece is DONE:", self.index)
-            #print(hashlib.sha1(self.data).digest() == self.expected_hash)
+        if hashlib.sha1(self.data).digest() == self.expected_hash:
+            print("piece is DONE:", self.index)
+            print(hashlib.sha1(self.data).digest() == self.expected_hash)
 
         #print(self.data.decode('utf-8'))
 
@@ -78,6 +78,7 @@ class Piece:
         if self.data:
             return False
 
+        #if self.valid(data):
         self.data = data
         self.length = len(data)
         self.block_count = math.ceil(self.length / BLOCK_SIZE)
