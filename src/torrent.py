@@ -75,9 +75,11 @@ class Torrent():
 
         if torrent.piece_count != Piece.get_hash_count(torrent.piece_hashes):
             raise Exception("Total length of file does not match number of piece hashes")
-
-        for hash in torrent.piece_hashes:
-            print(hash)
+        
+        i = 0
+        while i < torrent.piece_count:
+            print(torrent.piece_hashes[i*20:i*20+20])
+            i +=1
 
         # Optional info included in some torrents
         torrent.created_by = torrent.data.get("created by")
