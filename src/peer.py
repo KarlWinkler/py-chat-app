@@ -83,7 +83,7 @@ class Peer():
 
         block = Block(block_index, data=block_msg.block_data)
         piece: Piece = torrent.pieces[piece_index]
-        print(piece.index, len(piece))
+        print("received block for:", piece.index, len(piece))
         # piece.add_block(block)
         # piece.try_update_contents()
         #print(block.data.decode('utf-8'))
