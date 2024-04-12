@@ -77,7 +77,8 @@ class Client():
                 return tracker_response
 
         # Not in swarm or lost connection with current tracker
-        if tracker_urls := torrent.tracker_list.get("http").append(TRACKER_URL_NGROK):
+        if tracker_urls := torrent.tracker_list.get("http"):
+            tracker_urls.append(TRACKER_URL_NGROK)
             return self.try_tracker_urls(torrent, tracker_urls)
 
         return None
@@ -151,7 +152,6 @@ class Client():
 
         try:
             while self.running:
-                # TODO: SEND REQUEST MESSAGES FOR PIECES
                 #Download from connected peers
                 connected_peers_lock.acquire()
                 for peer in self.connected_peers.values():

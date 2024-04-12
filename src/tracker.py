@@ -9,7 +9,6 @@ import sys
 
 DEBUG_MODE = True
 
-HASHES = [-1,-1]
 
 class TrackerRequestHandler(BaseHTTPRequestHandler):
     def __init__(self, tracker: 'Tracker', *args, **kwargs):
@@ -32,16 +31,6 @@ class TrackerRequestHandler(BaseHTTPRequestHandler):
         info_hash = query_params.get("info_hash")[0]
         event = query_params.get("event")[0]
         seeding = query_params.get("seeding")[0].lower() == "true"
-
-        if HASHES[0] == -1:
-            HASHES[0] = info_hash
-        elif HASHES[1] == -1 and info_hash != HASHES[0]:
-            HASHES[1] = info_hash
-            if HASHES[0] != HASHES[1]:
-                print("NOT EQUAL AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", HASHES[0])
-                print(HASHES[1])
-            else:
-                print("HASHES EQUALLLLLLLLLLLLLLLLLLLLLLLL")
 
         try:
             peer_port = int(peer_port)
