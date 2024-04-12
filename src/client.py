@@ -209,6 +209,7 @@ class Client():
         self.start_tracker_requests(torrent)
 
         self.client_peer.start_listening()
+        sent_file = {}
 
         if DEBUG_MODE:
             print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address, self.client_peer.port)
@@ -227,11 +228,14 @@ class Client():
                         if peer is None:
                             continue
 
-                        # Send blocks to the connected peer
-                        for piece in torrent.pieces:
-                            for i in range(len(piece.blocks)):
-                                print(f"Sending block: {i} of piece: {piece.index}")
-                                peer.send_block(piece, i)
+                        if not sent_file.get(peer.peer_id):
+                            # Send blocks to the connected peer
+                            for piece in torrent.pieces:
+                                for i in range(len(piece.blocks)):
+                                    peer.send_block(piece, i)
+
+                            sent_file[peer.peer_id] = True
+
                     else:
                         sock: socket.socket
                 
