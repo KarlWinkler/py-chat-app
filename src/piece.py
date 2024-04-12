@@ -50,17 +50,21 @@ class Piece:
 
 
     def try_update_contents(self):
-        if not self.blocks:
+        if len(self.blocks) == 0:
             return False
+        
+        first_block: Block = self.blocks[0]
+        block_length = len(first_block.data)
+        expected_block_count = math.ceil(len(self.data)/block_length)
 
-        if len(self.blocks) == self.block_count:
+        if len(self.blocks) == expected_block_count:
             data = b''
             for i in range(self.block_count):
                 block: Block = self.blocks[i]
                 data += block.data
             self.data = data
 
-            #print(self.data.decode('utf-8'))
+            print(self.data.decode('utf-8'))
 
             return True
         return False
