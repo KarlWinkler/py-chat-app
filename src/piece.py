@@ -44,9 +44,9 @@ class Piece:
         return math.ceil(len(piece_hashes) / PIECE_HASH_LENGTH)
 
 
-    def add_block(self, block: Block, block_index: int):
+    def add_block(self, block: Block):
         #if 0 <= block.index <= len(self.blocks) - 1:
-        self.blocks.insert(block_index, block)
+        self.blocks.insert(block.index, block)
         print(f"piece {self.index} is now {len(self.blocks)} long")
 
 
