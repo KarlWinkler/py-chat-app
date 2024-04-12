@@ -302,6 +302,7 @@ class Piece(Message):
         message = struct.pack("!IB", self.payload_length, self.message_id)
         message += struct.pack("!I", self.piece_index)
         message += struct.pack("!I", self.block_index)
+        message += struct.pack("!I", self.block_length)
         message += struct.pack("!{}s".format(self.block_length), self.block_data)
 
         return message
@@ -314,8 +315,7 @@ class Piece(Message):
         if message_id != PIECE_ID:
             raise Exception("Malformed Piece message")
         
-        block_length = len(raw_message) - 4*3 - 1
-        piece_index, block_index = struct.unpack("!II", raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + 4*2])
+        piece_index, block_index, block_length = struct.unpack("!II", raw_message[PEER_WIRE_MESSAGE_LENGTH:PEER_WIRE_MESSAGE_LENGTH + 4*2])
         block_data = struct.unpack("!{}s".format(block_length), raw_message[PEER_WIRE_MESSAGE_LENGTH + 4*2:PEER_WIRE_MESSAGE_LENGTH + 4*2 + block_length])[0]
 
         return Piece(block_length, piece_index, block_index, block_data)

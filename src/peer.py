@@ -28,19 +28,6 @@ class Peer():
         self.completed_handshake = False
 
 
-    def send_block(self, piece: Piece, block_index: int):
-        if piece.blocks[block_index] is None:
-            return False
-        
-        block: Block = piece.blocks[block_index]
-        msg = message.Piece(block.block_size, piece.index, block_index, block.data)
-
-        if not self.send_data(msg.to_bytes()):
-            return None
-
-        return True
-
-
     def recv_message(self, torrent: Torrent):
         raw_header = self.receive_data(message.PEER_WIRE_MESSAGE_LENGTH)
         if not raw_header:
@@ -66,13 +53,31 @@ class Peer():
             self.recv_block(raw_header, torrent)
 
 
+    def send_block(self, piece: Piece, block_index: int):
+        if piece.blocks[block_index] is None:
+            return False
+        
+        block: Block = piece.blocks[block_index]
+        msg = message.Piece(block.block_size, piece.index, block_index, block.data)
+
+        if not self.send_data(msg.to_bytes()):
+            return None
+
+        return True
+
+
     def recv_block(self, raw_header, torrent: Torrent):
-        raw_data = self.receive_data(4*2 + BLOCK_SIZE) # TODO: Receive the real size of the block (last block will likely be less than BLOCK_SIZE)
+        raw_data = self.receive_data(4*3) # TODO: Receive the real size of the block (last block will likely be less than BLOCK_SIZE)
         if not raw_data:
             return None
 
-        piece_index, block_index = struct.unpack("!II", raw_data[:4*2])
-        block_msg = message.Piece.from_bytes(raw_header + raw_data)
+        piece_index, block_index, block_length = struct.unpack("!III", raw_data)
+
+        block_data = self.receive_data(BLOCK_SIZE)
+        if not block_data:
+            return None
+        
+        block_msg = message.Piece.from_bytes(raw_header + raw_data + block_data)
 
         print(f"Received block: {block_index} of piece: {piece_index}")
 
@@ -81,6 +86,7 @@ class Peer():
         #piece.add_block(block)
 
         #print(block.data.decode('utf-8'))
+
 
     """Send handshake before receive (for downloading peers)"""
     def initiate_handshake(self, info_hash: str, client_peer_id: str, expected_peer_id: str):
