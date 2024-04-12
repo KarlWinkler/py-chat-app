@@ -90,6 +90,7 @@ class Piece:
             block_offset += BLOCK_SIZE
 
         # Adjust the size of the last block to match the size of the actual contents
+        print(self.block_count)
         last_block: Block = self.blocks[self.block_count - 1]
         last_block.block_size = len(last_block.data)
 
