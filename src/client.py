@@ -16,7 +16,7 @@ SEED_TRACKER_URL = "http://127.0.0.1:35222"
 TRACKER_URL_NGROK = "https://2439-2604-3d09-1c7a-4db0-6908-dcd3-d3f2-67c6.ngrok-free.app"
 
 
-#connected_peers_lock = threading.Lock()
+connected_peers_lock = threading.Lock()
 
 class Client():
     def __init__(self, address: str, port: int, save_path: str, public_address: str = None, public_port: int = None):
@@ -105,9 +105,9 @@ class Client():
             if self.connected_peers.get(peer_info["peer id"]) or not peer_info["seeding"]:
                 continue
             if peer := self.try_connect_to_peer(info_hash, peer_info):
-                #connected_peers_lock.acquire()
+                connected_peers_lock.acquire()
                 self.connected_peers[peer.peer_id] = peer
-                #connected_peers_lock.release()
+                connected_peers_lock.release()
 
                 if DEBUG_MODE:
                     print(f"Connected to: {peer.peer_id, peer.address, peer.port}")
@@ -125,7 +125,7 @@ class Client():
                     response_dict: dict = tracker_response[1]
 
                     if not self.seeding and status_code == 200:
-                        #print("received tracker list")
+                        print("received tracker list")
                         self.connect_to_peers(torrent.info_hash, response_dict)
 
                     time.sleep(response_dict.get("interval", Tracker.DEFAULT_TRACKER_INTERVAL))
@@ -157,22 +157,22 @@ class Client():
         try:
             while self.running:
                 #Download from connected peers
-                #connected_peers_lock.acquire()
+                connected_peers_lock.acquire()
                 for peer in self.connected_peers.values():
                     peer: Peer
                     peer.recv_message(torrent)
-                #connected_peers_lock.release()
+                connected_peers_lock.release()
 
         except (SystemExit, KeyboardInterrupt):
             self.stop()
 
 
     def get_peer_by_socket(self, socket: socket.socket):
-        #connected_peers_lock.acquire()
+        connected_peers_lock.acquire()
         for peer in self.connected_peers.values():
             if peer.socket == socket:
                 return peer
-        #connected_peers_lock.release()
+        connected_peers_lock.release()
         return None
 
 
@@ -189,9 +189,9 @@ class Client():
             return None
 
         peer.peer_id = received_handshake.peer_id
-        #connected_peers_lock.acquire()
+        connected_peers_lock.acquire()
         self.connected_peers[peer.peer_id] = peer
-        #connected_peers_lock.release()
+        connected_peers_lock.release()
 
         if DEBUG_MODE:
             print(f"Completed handshake with {peer.peer_id, peer.address, peer.port}")
@@ -225,7 +225,7 @@ class Client():
                         # Send blocks to the connected peer
                         for piece in torrent.pieces:
                             for i in range(len(piece.blocks)):
-                                #print(f"Sending block: {i} of piece: {piece.index}")
+                                print(f"Sending block: {i} of piece: {piece.index}")
                                 peer.send_block(piece, i)
                     else:
                         sock: socket.socket
