@@ -45,22 +45,22 @@ class Piece:
 
 
     def add_block(self, block: Block):
-        if 0 <= block.index <= len(self.blocks) - 1:
-            self.blocks.insert(block.index, block)
+        #if 0 <= block.index <= len(self.blocks) - 1:
+        self.blocks.append(block)
 
 
     def try_update_contents(self):
         if not self.blocks:
             return False
 
-        if len(self.blocks) == 4 or len(self.blocks) == 1:
+        if len(self.blocks) == self.block_count:
             data = b''
             for i in range(self.block_count):
                 block: Block = self.blocks[i]
                 data += block.data
             self.data = data
 
-            print(self.data)
+            #print(self.data.decode('utf-8'))
 
             return True
         return False

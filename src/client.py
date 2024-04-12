@@ -92,19 +92,14 @@ class Client():
         )
         connected = peer.request_connection()
 
-        print("CONNECTED:", connected)
-
         if connected and peer.initiate_handshake(info_hash, self.client_peer.peer_id, peer.peer_id):
-            print("SENT handshake")
             return peer
         
         return None
 
 
     def connect_to_peers(self, info_hash: str, tracker_response: dict):
-        #print("trying connection with: ", len(tracker_response["peers"]))
         for peer_info in tracker_response["peers"]:
-            print("trying connection with: ", peer_info["peer id"], peer_info["ip"], peer_info["port"])
             # Only attempt to connect with seeding peers
             if self.connected_peers.get(peer_info["peer id"]) or not peer_info["seeding"]:
                 continue
@@ -160,7 +155,6 @@ class Client():
                 #Download from connected peers
                 connected_peers_lock.acquire()
                 for peer in self.connected_peers.values():
-                    #print("CHECKING FOR MESSAGES")
                     peer: Peer
                     peer.recv_message(torrent)
                 connected_peers_lock.release()
@@ -209,6 +203,12 @@ class Client():
 
         if DEBUG_MODE:
             print("MY PEER INFO: ", self.client_peer.peer_id, self.client_peer.address, self.client_peer.port)
+        
+        # for piece in torrent.pieces:
+        #     for i in range(len(piece.blocks)):
+        #         print(piece.blocks[i].data)
+        for piece in torrent.pieces:
+            piece.try_update_contents()
 
         try:
             while self.running:
@@ -223,6 +223,7 @@ class Client():
 
                         # Send blocks to the connected peer
                         for piece in torrent.pieces:
+                            print(piece.data)
                             for i in range(len(piece.blocks)):
                                 peer.send_block(piece, i)
                     else:

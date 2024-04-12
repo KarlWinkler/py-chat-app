@@ -48,8 +48,6 @@ class Peer():
 
         payload_length, message_id = struct.unpack("!IB", raw_header)
 
-        print("MESSAGE: ", message_id)
-
         if message_id == message.CHOKE_ID:
             pass
         elif message_id == message.UNCHOKE_ID:
@@ -76,12 +74,13 @@ class Peer():
         piece_index, block_index = struct.unpack("!II", raw_data[:4*2])
         block_msg = message.Piece.from_bytes(raw_header + raw_data)
 
-        print(f"Received block", piece_index, block_index)
+        print(f"Received block: {block_index} of piece: {piece_index}")
 
         block = Block(block_index, data=block_msg.block_data)
         piece: Piece = torrent.pieces[piece_index]
-        piece.add_block(block)
-        piece.try_update_contents()
+        #piece.add_block(block)
+
+        print(block.data.decode('utf-8'))
 
     """Send handshake before receive (for downloading peers)"""
     def initiate_handshake(self, info_hash: str, client_peer_id: str, expected_peer_id: str):
