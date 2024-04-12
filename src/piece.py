@@ -51,28 +51,25 @@ class Piece:
 
 
     def try_update_contents(self):
+        # Piece is empty
         if len(self.blocks) == 0:
             return False
         
-        first_block: Block = self.blocks[0]
-        block_length = len(first_block.data)
-        expected_block_count = math.ceil(self.length/block_length)
+        # Take the hash of the piece and compare with expected hash
+        # If they match, the piece is full
+        data = b''
+        for i in range(len(self.blocks)):
+            block: Block = self.blocks[i]
+            data += block.data
+        self.data = data
 
-        if self.index == 5:
-            expected_block_count = 2
-        print("actual vs expected:", len(self.blocks), expected_block_count)
+        if hashlib.sha1(self.data).digest() == self.expected_hash:
+            print("piece is DONE:", self.index)
+            print(hashlib.sha1(self.data).digest() == self.expected_hash)
 
-        if len(self.blocks) == expected_block_count:
-            data = b''
-            for i in range(self.block_count):
-                block: Block = self.blocks[i]
-                data += block.data
-            self.data = data
+        #print(self.data.decode('utf-8'))
 
-            #print(self.data.decode('utf-8'))
-
-            return True
-        return False
+        return True
 
 
     def try_init_contents(self, data: bytes):
